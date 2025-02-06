@@ -1,5 +1,5 @@
 http://:3001 {
-    root * /Users/alien/Projects/embedviznew
+    root * ./public
     file_server browse
     encode zstd gzip
 

@@ -1,43 +1,39 @@
-import { getAllEmbeddings } from "./db.js";
+import { Database } from "bun:sqlite";
 
-// Start the API server
+const db = new Database("db.sqlite", { create: true, readwrite: true });
+db.query(
+  `CREATE TABLE IF NOT EXISTS embeddings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT UNIQUE,
+  projection_batch_x REAL, projection_batch_y REAL
+)`
+).run();
+
+const getPoints = () =>
+  db
+    .query(
+      "SELECT filename, projection_batch_x x, projection_batch_y y FROM embeddings"
+    )
+    .all();
+
 Bun.serve({
   port: 3000,
-  async fetch(request) {
-    const pathname = new URL(request.url).pathname;
-
-    // Handle /api/points endpoint
-    if (pathname === "/api/points") {
-      return new Response(JSON.stringify(getAllEmbeddings()), {
+  async fetch(req) {
+    if (new URL(req.url).pathname === "/api/points")
+      return new Response(JSON.stringify(getPoints()), {
         headers: {
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",
         },
       });
-    }
 
-    // Serve essential static files
-    const staticFiles = {
+    const files = {
       "/": "./index.html",
       "/client.js": "./client.js",
-      "/sw.js": "./sw.js",
       "/favicon.ico": "./favicon.ico",
     };
-
-    const filePath = staticFiles[pathname];
-    if (filePath) {
-      try {
-        const file = Bun.file(filePath);
-        if (await file.exists()) {
-          return new Response(file);
-        }
-      } catch (err) {
-        console.error(`Error serving ${pathname}:`, err);
-      }
-    }
-
-    return new Response("Not Found", { status: 404 });
+    const file = files[new URL(req.url).pathname];
+    return file
+      ? new Response(Bun.file(file))
+      : new Response("Not Found", { status: 404 });
   },
 });
-
-console.log("API server running at http://localhost:3000");

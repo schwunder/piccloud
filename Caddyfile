@@ -1,20 +1,8 @@
 http://:3001 {
     root * ./public
-    file_server browse
-    encode zstd gzip
-
-    # Global CORS headers for all responses
-    header {
-        Access-Control-Allow-Origin http://localhost:3000
-        Access-Control-Allow-Methods GET, OPTIONS
-        Access-Control-Allow-Headers *
-        Access-Control-Max-Age 3600
-    }
-
-    # Additional headers for AVIF files
-    @avifFiles path *.avif
-    header @avifFiles {
-        Content-Type image/avif
-        Cache-Control "public, max-age=10, immutable"
-    }
+    file_server
+    encode zstd
+    header Access-Control-Allow-Origin http://localhost:3000
+    @avif path *.avif
+    header @avif Content-Type image/avif
 }

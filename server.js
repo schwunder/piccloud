@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 
-const db = new Database("db.sqlite", { create: true, readwrite: true });
+const db = new Database("db.sqlite", { create: true });
 db.query(
   `CREATE TABLE IF NOT EXISTS embeddings (
   id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT UNIQUE,
@@ -17,23 +17,30 @@ const getPoints = () =>
 
 Bun.serve({
   port: 3000,
-  async fetch(req) {
-    if (new URL(req.url).pathname === "/api/points")
+  fetch(req) {
+    const url = new URL(req.url);
+
+    if (url.pathname === "/api/points") {
       return new Response(JSON.stringify(getPoints()), {
         headers: {
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",
         },
       });
+    }
 
-    const files = {
-      "/": "./index.html",
-      "/client.js": "./client.js",
-      "/favicon.ico": "./favicon.ico",
-    };
-    const file = files[new URL(req.url).pathname];
-    return file
-      ? new Response(Bun.file(file))
-      : new Response("Not Found", { status: 404 });
+    if (url.pathname === "/") {
+      return new Response(Bun.file("index.html"));
+    }
+
+    if (url.pathname === "/client.js") {
+      return new Response(Bun.file("client.js"));
+    }
+
+    if (url.pathname === "/favicon.ico") {
+      return new Response(Bun.file("favicon.ico"));
+    }
+
+    return new Response("Not Found", { status: 404 });
   },
 });

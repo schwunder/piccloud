@@ -1,8 +1,21 @@
 http://:3001 {
-    root * ./public
-    file_server
-    encode zstd
-    header Access-Control-Allow-Origin http://localhost:3000
-    @avif path *.avif
-    header @avif Content-Type image/avif
+  root * thumbnails
+  file_server {
+    browse
+  }
+  encode zstd
+  header Access-Control-Allow-Origin "*"
+
+  @second_dir_ready {
+    file {
+      try_files /upload_done.flag
+    }
+  }
+
+  handle @second_dir_ready {
+    root * resized
+    file_server {
+      browse
+    }
+  }
 }

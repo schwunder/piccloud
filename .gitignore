@@ -1,4 +1,7 @@
-public/*
+public/thumbnails/*
+public/resized/*
 *.sqlite
 favicon.ico
 *.bak
+backup
+*test.js

@@ -11,7 +11,10 @@ db.query(
 const getPoints = () =>
   db
     .query(
-      "SELECT filename, projection_batch_x x, projection_batch_y y FROM embeddings"
+      `SELECT filename, projection_batch_x x, projection_batch_y y 
+       FROM embeddings 
+       WHERE filename GLOB 'Albrecht_Durer_[1-5].avif'
+       ORDER BY filename`
     )
     .all();
 

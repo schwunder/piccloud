@@ -1,84 +1,75 @@
+// Load an image from Caddy, either from /thumbnails or /resized:
 const loadImage = async (filename, isResized = false) => {
+  const src = `http://localhost:3001/${
+    isResized ? "resized" : "thumbnails"
+  }/${filename}`;
+  const img = new Image();
+  img.src = src;
   try {
-    const img = Object.assign(new Image(), {
-      src: `http://localhost:3001/${
-        isResized ? "resized" : "thumbnails"
-      }/${filename}`,
-    });
     await img.decode();
     return img;
-  } catch (error) {
-    console.error(`Failed to load image ${filename}:`, error);
+  } catch (e) {
+    console.error(`Failed to load image ${filename}:`, e);
+    return null;
   }
 };
 
+// Initialize the page:
 export async function init() {
+  const thumbsEl = document.getElementById("thumbnails");
+  const resizedEl = document.getElementById("resized");
+  const containerEl = document.querySelector(".container");
+  thumbsEl.textContent = "Loading...";
+
   try {
-    const thumbnailsContainer = document.getElementById("thumbnails");
-    const resizedContainer = document.getElementById("resized");
-    const container = document.querySelector(".container");
+    // Only fetch points from Bun server
+    const points = await fetch("http://localhost:3000/api/points").then((r) =>
+      r.ok ? r.json() : Promise.reject(new Error(r.statusText))
+    );
 
-    thumbnailsContainer.innerHTML = "Loading...";
+    thumbsEl.textContent = "";
 
-    const [entries, points] = await Promise.all([
-      fetch("http://localhost:3001/thumbnails/", {
-        headers: { Accept: "application/json" },
-      }).then((r) =>
-        r.ok ? r.json() : Promise.reject(new Error(r.statusText))
-      ),
-      fetch("http://localhost:3000/api/points").then((r) =>
-        r.ok ? r.json() : Promise.reject(new Error(r.statusText))
-      ),
-    ]);
+    // Load all thumbnails concurrently
+    await Promise.all(
+      points.map(async ({ filename, x, y }) => {
+        const img = await loadImage(filename);
+        if (!img) return;
 
-    thumbnailsContainer.innerHTML = "";
+        const thumbContainer = document.createElement("div");
+        thumbContainer.className = "thumbnail-container";
 
-    const imageMap = new Map(points.map((p) => [p.filename, p]));
-    const files = entries.filter((e) => !e.is_dir).map((e) => e.name);
-    let count = 0;
-
-    // Load all thumbnails at once
-    const thumbnails = await Promise.all(files.map(loadImage));
-    thumbnails.forEach((img, idx) => {
-      if (img && imageMap.has(files[idx])) {
-        const { x, y } = imageMap.get(files[idx]);
-        const container = document.createElement("div");
-        container.className = "thumbnail-container";
-
-        // Add click handler to load resized image
-        container.addEventListener("click", async () => {
-          const resizedImg = await loadImage(files[idx], true);
+        // On thumbnail click: load the 'resized' version
+        thumbContainer.onclick = async () => {
+          const resizedImg = await loadImage(filename, true);
           if (resizedImg) {
-            resizedContainer.innerHTML = "";
-            resizedContainer.appendChild(resizedImg);
-            document.querySelector(".container").classList.add("show-resized");
+            resizedEl.innerHTML = "";
+            resizedEl.appendChild(resizedImg);
+            containerEl.classList.add("show-resized");
           }
-        });
+        };
 
-        container.appendChild(img);
-        container.appendChild(
-          Object.assign(document.createElement("p"), {
-            textContent: `x: ${x}, y: ${y}`,
-          })
-        );
-        thumbnailsContainer.appendChild(container);
-        count++;
+        const labelEl = document.createElement("p");
+        labelEl.textContent = `x: ${x}, y: ${y}`;
+
+        thumbContainer.append(img, labelEl);
+        thumbsEl.appendChild(thumbContainer);
+      })
+    );
+
+    if (!thumbsEl.children.length) {
+      thumbsEl.textContent = "No images found";
+    }
+
+    // Close the resized pane when clicking on empty space
+    resizedEl.onclick = (e) => {
+      if (e.target === resizedEl) {
+        containerEl.classList.remove("show-resized");
       }
-    });
-
-    if (!count) thumbnailsContainer.innerHTML = "No images found";
-
-    // Add click handler to hide resized pane when clicking outside an image
-    resizedContainer.addEventListener("click", (event) => {
-      if (event.target === resizedContainer) {
-        document.querySelector(".container").classList.remove("show-resized");
-      }
-    });
-  } catch (error) {
-    console.error("Failed to initialize:", error);
-    const thumbnailsContainer = document.getElementById("thumbnails");
-    thumbnailsContainer.innerHTML = `Error: ${error.message}`;
+    };
+  } catch (e) {
+    console.error("Initialization failed:", e);
+    thumbsEl.textContent = `Error: ${e.message}`;
   }
 }
 
-addEventListener("load", () => init().catch(console.error));
+window.addEventListener("load", () => init().catch(console.error));

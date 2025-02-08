@@ -1,75 +1,146 @@
-// Load an image from Caddy, either from /thumbnails or /resized:
-const loadImage = async (filename, isResized = false) => {
-  const src = `http://localhost:3001/${
-    isResized ? "resized" : "thumbnails"
-  }/${filename}`;
-  const img = new Image();
-  img.src = src;
-  try {
-    await img.decode();
-    return img;
-  } catch (e) {
-    console.error(`Failed to load image ${filename}:`, e);
-    return null;
+(async function () {
+  const canvas = document.getElementById("canvas");
+  const context = canvas.getContext("2d");
+  const overlay = document.getElementById("loading-overlay");
+  const resizedPane = document.getElementById("resized");
+  const html = document.documentElement; // Apply class here to affect the entire page
+
+  let width = (canvas.width = window.innerWidth);
+  let height = (canvas.height = window.innerHeight);
+
+  // Load an image from Caddy
+  async function loadImage(filename, isResized = false) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = `http://localhost:3001/${
+        isResized ? "resized" : "thumbnails"
+      }/${filename}`;
+      img.onload = () => resolve(img);
+      img.onerror = (err) => reject(`Failed to load ${filename}: ${err}`);
+    });
   }
-};
-
-// Initialize the page:
-export async function init() {
-  const thumbsEl = document.getElementById("thumbnails");
-  const resizedEl = document.getElementById("resized");
-  const containerEl = document.querySelector(".container");
-  thumbsEl.textContent = "Loading...";
 
   try {
-    // Only fetch points from Bun server
-    const points = await fetch("http://localhost:3000/api/points").then((r) =>
-      r.ok ? r.json() : Promise.reject(new Error(r.statusText))
+    const response = await fetch("/api/points");
+    if (!response.ok) throw new Error(response.statusText);
+    const points = await response.json();
+    console.log(`Total points received: ${points.length}`);
+
+    const thumbnails = await Promise.all(
+      points.map((p) => loadImage(p.filename))
     );
+    points.forEach((point, i) => {
+      point.thumb = thumbnails[i];
+    });
 
-    thumbsEl.textContent = "";
+    const margin = 40;
+    const xExtent = d3.extent(points, (d) => d.x);
+    const yExtent = d3.extent(points, (d) => d.y);
+    const xScale = d3
+      .scaleLinear()
+      .domain(xExtent)
+      .range([margin, width - margin]);
+    const yScale = d3
+      .scaleLinear()
+      .domain(yExtent)
+      .range([height - margin, margin]);
 
-    // Load all thumbnails concurrently
-    await Promise.all(
-      points.map(async ({ filename, x, y }) => {
-        const img = await loadImage(filename);
-        if (!img) return;
+    let currentTransform = d3.zoomIdentity;
 
-        const thumbContainer = document.createElement("div");
-        thumbContainer.className = "thumbnail-container";
+    function draw(transform = d3.zoomIdentity) {
+      context.save();
+      context.clearRect(0, 0, width, height);
+      context.translate(transform.x, transform.y);
+      context.scale(transform.k, transform.k);
 
-        // On thumbnail click: load the 'resized' version
-        thumbContainer.onclick = async () => {
-          const resizedImg = await loadImage(filename, true);
-          if (resizedImg) {
-            resizedEl.innerHTML = "";
-            resizedEl.appendChild(resizedImg);
-            containerEl.classList.add("show-resized");
-          }
+      points.forEach((point) => {
+        const cx = xScale(point.x);
+        const cy = yScale(point.y);
+        const imgW = 80;
+        const imgH = 80;
+
+        context.drawImage(
+          point.thumb,
+          cx - imgW / 2,
+          cy - imgH / 2,
+          imgW,
+          imgH
+        );
+
+        context.beginPath();
+        context.arc(cx, cy, 2, 0, 2 * Math.PI);
+        context.fillStyle = "red";
+        context.fill();
+
+        point.bounds = {
+          x: cx - imgW / 2,
+          y: cy - imgH / 2,
+          width: imgW,
+          height: imgH,
         };
+      });
 
-        const labelEl = document.createElement("p");
-        labelEl.textContent = `x: ${x}, y: ${y}`;
-
-        thumbContainer.append(img, labelEl);
-        thumbsEl.appendChild(thumbContainer);
-      })
-    );
-
-    if (!thumbsEl.children.length) {
-      thumbsEl.textContent = "No images found";
+      context.restore();
     }
 
-    // Close the resized pane when clicking on empty space
-    resizedEl.onclick = (e) => {
-      if (e.target === resizedEl) {
-        containerEl.classList.remove("show-resized");
-      }
-    };
-  } catch (e) {
-    console.error("Initialization failed:", e);
-    thumbsEl.textContent = `Error: ${e.message}`;
-  }
-}
+    const zoom = d3
+      .zoom()
+      .scaleExtent([0.5, 20])
+      .on("zoom", (event) => {
+        currentTransform = event.transform;
+        draw(currentTransform);
+      });
 
-window.addEventListener("load", () => init().catch(console.error));
+    d3.select(canvas).call(zoom);
+
+    canvas.addEventListener("click", async (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clickX =
+        (e.clientX - rect.left - currentTransform.x) / currentTransform.k;
+      const clickY =
+        (e.clientY - rect.top - currentTransform.y) / currentTransform.k;
+
+      for (const point of points) {
+        const { x, y, width: w, height: h } = point.bounds;
+        if (clickX >= x && clickX <= x + w && clickY >= y && clickY <= y + h) {
+          console.log("Splitting viewport...");
+
+          // 🚀 Apply the class to the entire HTML document
+          html.classList.add("show-resized");
+
+          resizedPane.innerHTML = `<p>Loading resized image for ${point.filename}...</p>`;
+
+          try {
+            const resizedImg = await loadImage(point.filename, true);
+            resizedPane.innerHTML = "";
+            resizedPane.appendChild(resizedImg);
+          } catch (err) {
+            console.error(err);
+            resizedPane.textContent = `Error loading ${point.filename}: ${err}`;
+          }
+          break;
+        }
+      }
+    });
+
+    resizedPane.addEventListener("click", (e) => {
+      if (e.target === resizedPane) {
+        html.classList.remove("show-resized"); // Collapse the pane
+      }
+    });
+
+    draw(currentTransform);
+    overlay.style.display = "none";
+
+    window.addEventListener("resize", () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      xScale.range([margin, width - margin]);
+      yScale.range([height - margin, margin]);
+      draw(currentTransform);
+    });
+  } catch (error) {
+    console.error("Error loading data:", error);
+    overlay.textContent = `Error: ${error.message || error}`;
+  }
+})();

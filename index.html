@@ -1,32 +1,64 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <title>Point Cloud Viewer</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-      .container {
-        display: flex;
-        height: 100vh;
+      /* Reset and full-window styling */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        height: 100%;
+        display: flex; /* Flex container for canvas and pane */
       }
-      #thumbnails {
-        flex: 1;
+      #canvas {
+        width: 100vw; /* Full width by default */
+        transition: width 0.3s ease;
       }
       #resized {
-        flex: 0;
+        display: none; /* Hidden initially */
+        width: 0;
+        background-color: #f0f0f0;
+        align-items: center;
+        justify-content: center;
+        transition: width 0.3s ease;
+        overflow: auto;
       }
-      .show-resized #thumbnails,
+      /* Trigger: Halve the viewport when 'show-resized' is active */
+      .show-resized #canvas {
+        width: 50vw; /* Half of the viewport */
+      }
       .show-resized #resized {
-        flex: 1;
+        display: flex;
+        width: 50vw; /* Other half of the viewport */
       }
       img {
         max-width: 100%;
+        max-height: 100%;
+      }
+      #loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(255, 255, 255, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: #333;
+        z-index: 9999;
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <div id="thumbnails"></div>
-      <div id="resized"></div>
-    </div>
+    <canvas id="canvas"></canvas>
+    <div id="resized"></div>
+    <div id="loading-overlay">Loading data...</div>
     <script type="module" src="/client.js"></script>
   </body>
 </html>

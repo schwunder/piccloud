@@ -113,6 +113,13 @@
           try {
             const resizedImg = await loadImage(point.filename, true);
             resizedPane.innerHTML = "";
+            /*
+            const artistResponse = await fetch("/api/artists");
+            if (!artistResponse.ok) throw new Error(artistResponse.statusText);
+            // Extract artist name from filename without modifying it
+            const artistName = point.filename.split("_")[0].replace(/_/g, " ");
+            console.log(artists.filter((a) => a.name === artistName));
+            */
             resizedPane.appendChild(resizedImg);
           } catch (err) {
             console.error(err);

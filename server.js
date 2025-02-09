@@ -8,6 +8,22 @@ db.query(
 )`
 ).run();
 
+const artists = new Database("artists.sqlite", { create: true });
+artists
+  .query(
+    `CREATE TABLE IF NOT EXISTS artists (
+      id INTEGER PRIMARY KEY,
+      name TEXT,
+      years TEXT,
+      genre TEXT,
+      nationality TEXT,
+      bio TEXT,
+      wikipedia TEXT,
+      paintings INTEGER
+    ) `
+  )
+  .run();
+
 const getPoints = () =>
   db
     .query(
@@ -15,6 +31,16 @@ const getPoints = () =>
        FROM embeddings 
        WHERE filename GLOB 'Albrecht_Durer_[1-5].avif'
        ORDER BY filename`
+    )
+    .all();
+
+const getArtists = () =>
+  artists
+    .query(
+      `SELECT name, years, genre, nationality, bio, wikipedia, paintings
+       FROM artists
+       WHERE name = 'Albrecht Durer'
+       ORDER BY name`
     )
     .all();
 
@@ -31,7 +57,16 @@ Bun.serve({
         },
       });
     }
-
+    /*
+    if (url.pathname === "/api/artists") {
+      return new Response(JSON.stringify(getArtists()), {
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
+    }
+*/
     if (url.pathname === "/") {
       return new Response(Bun.file("index.html"));
     }

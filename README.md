@@ -24,3 +24,9 @@ first add change from public to public/thumbnails
 then add public/resized
 this is for caddyfile
 other path to display localhost:3001/thumbnails and localhost:3001/resized?
+
+check with all 8500
+do umap and tsne
+for this to work
+need to get all the other files into this project
+auweier

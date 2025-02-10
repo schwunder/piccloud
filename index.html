@@ -8,24 +8,18 @@
       /* Reset and full-window styling */
       html,
       body {
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
         height: 100%;
         display: flex; /* Flex container for canvas and pane */
+        overflow: hidden;
       }
       #canvas {
         width: 100vw; /* Full width by default */
-        transition: width 0.3s ease;
       }
       #resized {
         display: none; /* Hidden initially */
         width: 0;
-        background-color: #f0f0f0;
-        align-items: center;
-        justify-content: center;
-        transition: width 0.3s ease;
         overflow: auto;
+        flex-direction: column;
       }
       /* Trigger: Halve the viewport when 'show-resized' is active */
       .show-resized #canvas {
@@ -39,26 +33,20 @@
         max-width: 100%;
         max-height: 100%;
       }
-      #loading-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: rgba(255, 255, 255, 0.9);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        color: #333;
-        z-index: 9999;
-      }
     </style>
   </head>
   <body>
     <canvas id="canvas"></canvas>
-    <div id="resized"></div>
-    <div id="loading-overlay">Loading data...</div>
+    <div id="resized">
+      <div id="image"></div>
+      <p id="bio"></p>
+      <p id="genre"></p>
+      <p id="name"></p>
+      <p id="nationality"></p>
+      <p id="paintings"></p>
+      <p id="wikipedia"></p>
+      <p id="years"></p>
+    </div>
     <script type="module" src="/client.js"></script>
   </body>
 </html>

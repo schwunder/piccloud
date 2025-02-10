@@ -1,7 +1,6 @@
 (async function () {
   const canvas = document.getElementById("canvas");
   const context = canvas.getContext("2d");
-  const overlay = document.getElementById("loading-overlay");
   const resizedPane = document.getElementById("resized");
   const html = document.documentElement; // Apply class here to affect the entire page
 
@@ -104,30 +103,44 @@
         const { x, y, width: w, height: h } = point.bounds;
         if (clickX >= x && clickX <= x + w && clickY >= y && clickY <= y + h) {
           console.log("Splitting viewport...");
-
-          // 🚀 Apply the class to the entire HTML document
           html.classList.add("show-resized");
 
-          resizedPane.innerHTML = `<p>Loading resized image for ${point.filename}...</p>`;
+          // Clear previous content
+          document.getElementById("image").innerHTML =
+            "<p>Loading resized image...</p>";
 
           try {
             const resizedImg = await loadImage(point.filename, true);
-            resizedPane.innerHTML = "";
+            document.getElementById("image").innerHTML = "";
+            document.getElementById("image").appendChild(resizedImg);
 
             const artistResponse = await fetch("/api/artists");
             if (!artistResponse.ok) throw new Error(artistResponse.statusText);
             const artists = await artistResponse.json();
-            // Get just the name from the first artist object
-            const artistName = artists[0].name;
-            console.log("Artist from point:", point.artist);
-            console.log("Artist from API:", artistName);
-            console.log("Comparison result:", point.artist === artistName);
-            console.log(artists[0]);
 
-            resizedPane.appendChild(resizedImg);
+            // Find the matching artist
+            const artist = artists.find((a) => a.name === point.artist);
+
+            if (artist) {
+              // Update all the fields with artist data
+              document.getElementById("bio").textContent = artist.bio;
+              document.getElementById("genre").textContent = artist.genre;
+              document.getElementById("name").textContent = artist.name;
+              document.getElementById("nationality").textContent =
+                artist.nationality;
+              document.getElementById("paintings").textContent =
+                artist.paintings;
+              document.getElementById("wikipedia").textContent =
+                artist.wikipedia;
+              document.getElementById("years").textContent = artist.years;
+            } else {
+              console.error("Artist not found:", point.artist);
+            }
           } catch (err) {
             console.error(err);
-            resizedPane.textContent = `Error loading ${point.filename}: ${err}`;
+            document.getElementById(
+              "image"
+            ).textContent = `Error loading ${point.filename}: ${err}`;
           }
           break;
         }
@@ -141,7 +154,6 @@
     });
 
     draw(currentTransform);
-    overlay.style.display = "none";
 
     window.addEventListener("resize", () => {
       width = canvas.width = window.innerWidth;
@@ -152,6 +164,5 @@
     });
   } catch (error) {
     console.error("Error loading data:", error);
-    overlay.textContent = `Error: ${error.message || error}`;
   }
 })();

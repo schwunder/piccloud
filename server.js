@@ -16,6 +16,7 @@ const routes = {
   "/api/artists": serve(getArtists()),
   "/": serve("index.html"),
   "/client.js": serve("client.js"),
+  "/d3.js": serve("d3.js"),
   "/favicon.ico": serve("favicon.ico"),
 };
 

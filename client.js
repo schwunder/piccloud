@@ -1,274 +1,281 @@
 (async () => {
-  const canvas = document.getElementById("canvas");
-  const context = canvas.getContext("2d");
-  const resizedPane = document.getElementById("resized");
-  const html = document.documentElement; // Apply class here to affect the entire page
+  /* ============================================================
+   * PART A: D3 & CANVAS DRAWING PIPELINE
+   * ============================================================
+   * This section handles:
+   *  - Updating the canvas dimensions and D3 scale ranges.
+   *  - Initializing D3 scales and attaching zoom behavior.
+   *  - Pure coordinate and bounds calculations.
+   *  - Drawing points on the canvas (including mutation of each point’s bounds).
+   * ============================================================ */
 
-  // === Canvas Dimension Management ===
-  // Handles window resizing and scale updates
-  // Dependencies: None
-  // Used by: D3 zoom handling, window resize events
-  // Suggestion: Group with d3 scale updates since they're tightly coupled
-  const canvasDimensions = {
-    update: (canvas) => {
-      // Suggestion: This pure calculation could be separated from canvas mutation
-      const dimensions = {
-        width: window.innerWidth,
-        height: window.innerHeight,
-      };
-
-      // Necessary mutation - keep this separate from pure calculation
-      canvas.width = dimensions.width;
-      canvas.height = dimensions.height;
-
-      return dimensions;
-    },
-
-    // Suggestion: Could return new scale instances instead of mutating
-    // But needs careful coordination with d3 zoom behavior
-    updateScales: (xScale, yScale, { width, height }, margin) => {
-      xScale.range([margin, width - margin]);
-      yScale.range([height - margin, margin]);
-      return { width, height, margin };
-    },
+  // Update the canvas dimensions to match the window.
+  const updateDimensions = (canvas) => {
+    const dimensions = {
+      width: window.innerWidth,
+      height: window.innerHeight,
+    };
+    canvas.width = dimensions.width;
+    canvas.height = dimensions.height;
+    return dimensions;
   };
 
-  let dimensions = canvasDimensions.update(canvas);
-
-  // === Image Loading Utilities ===
-  // Handles all image loading operations
-  // Dependencies: None
-  // Used by: Initial point setup, artist display
-  // Note: Must maintain point mutation pattern as other modules depend on it
-  const loadImages = {
-    single: async (filename, isResized = false) => {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.src = `http://localhost:3001/${
-          isResized ? "resized" : "thumbnails"
-        }/${filename}`;
-        img.onload = () => resolve(img);
-        img.onerror = (err) => reject(`Failed to load ${filename}: ${err}`);
-      });
-    },
-
-    forPoints: async (points) => {
-      const thumbnails = await Promise.all(
-        points.map((p) => loadImages.single(p.filename))
-      );
-      points.forEach((point, i) => {
-        point.thumb = thumbnails[i];
-      });
-      return points;
-    },
+  // Update the range of D3 scales based on new dimensions.
+  const updateScales = (xScale, yScale, dimensions, margin) => {
+    xScale.range([margin, dimensions.width - margin]);
+    yScale.range([dimensions.height - margin, margin]);
+    return dimensions;
   };
 
-  try {
-    const response = await fetch("/api/points");
-    if (!response.ok) throw new Error(response.statusText);
-
-    const points = await response.json();
-    console.log(`Total points received: ${points.length}`);
-
-    await loadImages.forPoints(points);
-
-    const margin = 40;
-    // Suggestion: Group these d3 scale initializations with zoom handling
+  // Initialize D3 scales and attach zoom behavior.
+  // onZoom is a callback that will be used to update the current transform and re-draw.
+  const initScalesAndZoom = (canvas, points, margin, dimensions, onZoom) => {
     const xScale = d3
       .scaleLinear()
       .domain(d3.extent(points, (d) => d.x))
       .range([margin, dimensions.width - margin]);
+
     const yScale = d3
       .scaleLinear()
       .domain(d3.extent(points, (d) => d.y))
       .range([dimensions.height - margin, margin]);
 
-    // Suggestion: This transform state could be managed alongside other d3 state
-    let currentTransform = d3.zoomIdentity;
+    const zoom = d3
+      .zoom()
+      .scaleExtent([0.5, 20])
+      .on("zoom", (event) => onZoom(event.transform));
 
-    // === Canvas Drawing Functions ===
-    // Core rendering logic for points and images
-    // Dependencies: Canvas context, scales, point data
-    // Used by: Zoom handler, window resize
-    // Note: Coordinate and bounds calculations can be pure, but drawing must mutate canvas
-    // These pure functions are working well - could be model for other calculations
-    const getPointCoords = (point, xScale, yScale) => {
-      const [cx, cy] = [xScale(point.x), yScale(point.y)];
-      const [imgW, imgH] = [80, 80];
-      return { cx, cy, imgW, imgH };
-    };
+    d3.select(canvas).call(zoom);
+    return { xScale, yScale };
+  };
 
-    const getPointBounds = (cx, cy, imgW, imgH) => ({
-      x: cx - imgW / 2,
-      y: cy - imgH / 2,
-      width: imgW,
-      height: imgH,
+  // Pure function: Compute the drawing coordinates and image size for a point.
+  const getPointCoords = (point, xScale, yScale) => {
+    const cx = xScale(point.x);
+    const cy = yScale(point.y);
+    const imgW = 80;
+    const imgH = 80;
+    return { cx, cy, imgW, imgH };
+  };
+
+  // Pure function: Compute the bounding box for a point’s image.
+  const getPointBounds = (cx, cy, imgW, imgH) => ({
+    x: cx - imgW / 2,
+    y: cy - imgH / 2,
+    width: imgW,
+    height: imgH,
+  });
+
+  // Draw a single point (thumbnail plus a red dot) on the canvas.
+  // Returns the computed bounds.
+  const drawPoint = (context, point, xScale, yScale) => {
+    const { cx, cy, imgW, imgH } = getPointCoords(point, xScale, yScale);
+    context.drawImage(point.thumb, cx - imgW / 2, cy - imgH / 2, imgW, imgH);
+    context.beginPath();
+    context.arc(cx, cy, 2, 0, 2 * Math.PI);
+    context.fillStyle = "red";
+    context.fill();
+    return getPointBounds(cx, cy, imgW, imgH);
+  };
+
+  // Clear the canvas, apply the current transform, and draw all points.
+  // This function mutates the canvas context and updates each point’s bounds.
+  const drawAllPoints = (
+    context,
+    points,
+    xScale,
+    yScale,
+    dimensions,
+    transform = d3.zoomIdentity
+  ) => {
+    context.save();
+    context.clearRect(0, 0, dimensions.width, dimensions.height);
+    context.translate(transform.x, transform.y);
+    context.scale(transform.k, transform.k);
+    points.forEach((point) => {
+      point.bounds = drawPoint(context, point, xScale, yScale);
+    });
+    context.restore();
+  };
+
+  /* ============================================================
+   * PART B: IMAGE LOADING & EVENT HANDLING PIPELINE
+   * ============================================================
+   * This section handles:
+   *  - Loading images and attaching thumbnails (mutating the points).
+   *  - Converting raw mouse events into canvas coordinates.
+   *  - Hit detection and, if a point is clicked, loading & displaying
+   *    a resized image and updating artist info in the DOM.
+   * ============================================================
+   */
+
+  // Load a single image (either a thumbnail or a resized version).
+  const loadImage = (filename, isResized = false) =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = `http://localhost:3001/${
+        isResized ? "resized" : "thumbnails"
+      }/${filename}`;
+      img.onload = () => resolve(img);
+      img.onerror = (err) => reject(`Failed to load ${filename}: ${err}`);
     });
 
-    // Suggestion: Drawing function could be split into pure calculation and canvas mutation
-    const drawPoint = (context, point, xScale, yScale) => {
-      const { cx, cy, imgW, imgH } = getPointCoords(point, xScale, yScale);
+  // Load thumbnail images for all points and attach them.
+  // (This function mutates the points by adding a `thumb` property.)
+  const loadImagesForPoints = async (points) => {
+    const thumbnails = await Promise.all(
+      points.map((p) => loadImage(p.filename))
+    );
+    points.forEach((point, i) => {
+      point.thumb = thumbnails[i];
+    });
+    return points;
+  };
 
-      // Canvas mutations must stay together
-      context.drawImage(point.thumb, cx - imgW / 2, cy - imgH / 2, imgW, imgH);
-      context.beginPath();
-      context.arc(cx, cy, 2, 0, 2 * Math.PI);
-      context.fillStyle = "red";
-      context.fill();
+  // Convert client (mouse) coordinates into untransformed canvas coordinates.
+  const getCoordinates = (clientX, clientY, transform, rect) => ({
+    x: (clientX - rect.left - transform.x) / transform.k,
+    y: (clientY - rect.top - transform.y) / transform.k,
+  });
 
-      return getPointBounds(cx, cy, imgW, imgH);
-    };
+  // Check if (x, y) is within a given bounding box.
+  const isInBounds = (x, y, bounds) =>
+    x >= bounds.x &&
+    x <= bounds.x + bounds.width &&
+    y >= bounds.y &&
+    y <= bounds.y + bounds.height;
 
-    // Suggestion: Draw function could separate transform calculations from canvas operations
-    function draw(transform = d3.zoomIdentity) {
-      const { x, y, k } = transform;
+  // Find the first point whose bounds contain the given coordinates.
+  const findClickedPoint = (points, coords) =>
+    points.find((point) => isInBounds(coords.x, coords.y, point.bounds));
 
-      // Canvas context operations must stay sequential
-      context.save();
-      context.clearRect(0, 0, dimensions.width, dimensions.height);
-      context.translate(x, y);
-      context.scale(k, k);
+  // Update DOM fields with the artist's data.
+  const updateArtistFields = (artist) => {
+    const fields = [
+      "bio",
+      "genre",
+      "name",
+      "nationality",
+      "paintings",
+      "wikipedia",
+      "years",
+    ];
+    fields.forEach((field) => {
+      const el = document.getElementById(field);
+      if (el) {
+        el.textContent = artist[field] || "";
+      }
+    });
+  };
 
-      // Point drawing could be made more functional
-      points.forEach((point) => {
-        point.bounds = drawPoint(context, point, xScale, yScale);
-      });
-
-      context.restore();
+  // Load a resized image and artist data, then update the artist display.
+  const loadAndDisplayArtist = async (clickedPoint) => {
+    const imageElement = document.getElementById("image");
+    imageElement.innerHTML = "<p>Loading resized image...</p>";
+    try {
+      const [resizedImg, artists] = await Promise.all([
+        loadImage(clickedPoint.filename, true),
+        fetch("/api/artists").then((res) => {
+          if (res.ok) return res.json();
+          throw new Error(res.statusText);
+        }),
+      ]);
+      imageElement.innerHTML = "";
+      imageElement.appendChild(resizedImg);
+      const artist = artists.find((a) => a.name === clickedPoint.artist);
+      if (artist) {
+        updateArtistFields(artist);
+      }
+    } catch (err) {
+      console.error(err);
+      imageElement.textContent = `Error loading ${clickedPoint.filename}: ${err}`;
     }
+  };
 
-    // === D3 Zoom Handling ===
-    // Manages zoom behavior and transform updates
-    // Dependencies: Canvas context, draw function, currentTransform
-    // Used by: Canvas initialization, point rendering
-    // Suggestion: Could group with scale initialization since they're both d3 setup
-    // Suggestion: These d3 zoom handlers could be grouped with scale initialization
-    const zoomHandler = {
-      init: (canvas, onZoom) => {
-        const zoom = d3.zoom().scaleExtent([0.5, 20]).on("zoom", onZoom);
-        d3.select(canvas).call(zoom);
-        return zoom;
-      },
+  /* ============================================================
+   * MAIN COMPOSITION: ASSEMBLE THE PIPELINES
+   * ============================================================
+   * This section ties together the two pipelines.
+   * It sets up the canvas and D3 zoom, loads the images,
+   * draws the points, and installs the event listeners.
+   * ============================================================
+   */
 
-      // Could return new transform instead of mutating global state
-      handleZoom: ({ transform }) => {
-        currentTransform = transform;
-        draw(transform);
-      },
-    };
+  // Grab required DOM elements.
+  const canvas = document.getElementById("canvas");
+  const context = canvas.getContext("2d");
+  const resizedPane = document.getElementById("resized");
+  const html = document.documentElement;
 
-    const zoom = zoomHandler.init(canvas, zoomHandler.handleZoom);
+  // 1. Set up the canvas dimensions.
+  let dimensions = updateDimensions(canvas);
 
-    // === Event Handling: Click Detection ===
-    // Manages click coordinates and point detection
-    // Dependencies: Point bounds, currentTransform
-    // Used by: Canvas click handler
-    // Note: Pure calculations working well here, keep this pattern
-    // These pure detection functions are a good pattern to follow
-    const pointHitDetection = {
-      getCoordinates: (clientX, clientY, transform, rect) => ({
-        x: (clientX - rect.left - transform.x) / transform.k,
-        y: (clientY - rect.top - transform.y) / transform.k,
-      }),
+  // 2. Fetch point data.
+  const pointsResponse = await fetch("/api/points");
+  if (!pointsResponse.ok) throw new Error(pointsResponse.statusText);
+  const points = await pointsResponse.json();
+  console.log(`Total points received: ${points.length}`);
 
-      isInBounds: (x, y, bounds) =>
-        x >= bounds.x &&
-        x <= bounds.x + bounds.width &&
-        y >= bounds.y &&
-        y <= bounds.y + bounds.height,
+  // 3. Load thumbnail images and attach them (mutates the points).
+  await loadImagesForPoints(points);
 
-      findClickedPoint: (points, coords) =>
-        points.find((point) =>
-          pointHitDetection.isInBounds(coords.x, coords.y, point.bounds)
-        ),
-    };
+  // 4. Set up and maintain the current D3 zoom transform.
+  let currentTransform = d3.zoomIdentity;
+  const onZoom = (transform) => {
+    currentTransform = transform;
+    drawAllPoints(
+      context,
+      points,
+      xScale,
+      yScale,
+      dimensions,
+      currentTransform
+    );
+  };
 
-    // === Artist Data Display Handling ===
-    // Manages artist information display and image loading
-    // Dependencies: loadImages, DOM elements, point data
-    // Used by: Point click handler
-    // Note: DOM updates must be mutations, but field mapping can be pure
-    // Suggestion: Artist display could separate data preparation from DOM updates
-    const artistDisplay = {
-      updateFields: (artist) => {
-        const fields = [
-          "bio",
-          "genre",
-          "name",
-          "nationality",
-          "paintings",
-          "wikipedia",
-          "years",
-        ];
+  // 5. Initialize D3 scales and zoom behavior.
+  const margin = 40;
+  const { xScale, yScale } = initScalesAndZoom(
+    canvas,
+    points,
+    margin,
+    dimensions,
+    onZoom
+  );
 
-        // This field mapping is pure - good pattern
-        const updates = fields.map((field) => ({
-          element: document.getElementById(field),
-          value: artist[field],
-        }));
+  // 6. Perform the initial drawing of all points.
+  drawAllPoints(context, points, xScale, yScale, dimensions, currentTransform);
 
-        // DOM updates must stay as mutations
-        updates.forEach(({ element, value }) => (element.textContent = value));
-      },
+  // 7. Install event listener on the canvas for hit detection.
+  canvas.addEventListener("click", async (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const coords = getCoordinates(e.clientX, e.clientY, currentTransform, rect);
+    const clickedPoint = findClickedPoint(points, coords);
+    if (clickedPoint) {
+      console.log("Splitting viewport...");
+      html.classList.add("show-resized");
+      await loadAndDisplayArtist(clickedPoint);
+    }
+  });
 
-      async loadAndDisplay(clickedPoint) {
-        const imageElement = document.getElementById("image");
-        imageElement.innerHTML = "<p>Loading resized image...</p>";
+  // 8. Install event listener on the resized pane to hide the artist display.
+  resizedPane.addEventListener("click", ({ target }) => {
+    if (target === resizedPane) {
+      html.classList.remove("show-resized");
+    }
+  });
 
-        try {
-          const [resizedImg, artists] = await Promise.all([
-            loadImages.single(clickedPoint.filename, true),
-            fetch("/api/artists").then((res) =>
-              res.ok ? res.json() : Promise.reject(res.statusText)
-            ),
-          ]);
-
-          imageElement.innerHTML = "";
-          imageElement.appendChild(resizedImg);
-
-          const artist = artists.find((a) => a.name === clickedPoint.artist);
-          if (artist) {
-            artistDisplay.updateFields(artist);
-          }
-        } catch (err) {
-          console.error(err);
-          imageElement.textContent = `Error loading ${clickedPoint.filename}: ${err}`;
-        }
-      },
-    };
-
-    canvas.addEventListener("click", async (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const coords = pointHitDetection.getCoordinates(
-        e.clientX,
-        e.clientY,
-        currentTransform,
-        rect
-      );
-
-      const clickedPoint = pointHitDetection.findClickedPoint(points, coords);
-
-      if (clickedPoint) {
-        console.log("Splitting viewport...");
-        html.classList.add("show-resized");
-        await artistDisplay.loadAndDisplay(clickedPoint);
-      }
-    });
-
-    resizedPane.addEventListener("click", ({ target }) => {
-      if (target === resizedPane) {
-        html.classList.remove("show-resized");
-      }
-    });
-
-    draw(currentTransform);
-
-    window.addEventListener("resize", () => {
-      dimensions = canvasDimensions.update(canvas);
-      canvasDimensions.updateScales(xScale, yScale, dimensions, margin);
-      draw(currentTransform);
-    });
-  } catch (error) {
-    console.error("Error loading data:", error);
-  }
+  // 9. On window resize, update dimensions, scales, and redraw the canvas.
+  window.addEventListener("resize", () => {
+    dimensions = updateDimensions(canvas);
+    updateScales(xScale, yScale, dimensions, margin);
+    drawAllPoints(
+      context,
+      points,
+      xScale,
+      yScale,
+      dimensions,
+      currentTransform
+    );
+  });
 })();

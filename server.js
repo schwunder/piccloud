@@ -3,7 +3,7 @@ import { Database } from "bun:sqlite";
 const db = new Database("db.sqlite", { create: true });
 db.query(
   `CREATE TABLE IF NOT EXISTS embeddings (
-  id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT UNIQUE,
+  id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT UNIQUE, artist TEXT,
   projection_batch_x REAL, projection_batch_y REAL
 )`
 ).run();
@@ -27,7 +27,7 @@ artists
 const getPoints = () =>
   db
     .query(
-      `SELECT filename, projection_batch_x x, projection_batch_y y 
+      `SELECT filename, artist, projection_batch_x x, projection_batch_y y 
        FROM embeddings 
        WHERE filename GLOB 'Albrecht_Durer_[1-5].avif'
        ORDER BY filename`
@@ -57,7 +57,6 @@ Bun.serve({
         },
       });
     }
-    /*
     if (url.pathname === "/api/artists") {
       return new Response(JSON.stringify(getArtists()), {
         headers: {
@@ -66,7 +65,6 @@ Bun.serve({
         },
       });
     }
-*/
     if (url.pathname === "/") {
       return new Response(Bun.file("index.html"));
     }

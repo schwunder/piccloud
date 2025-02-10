@@ -1,82 +1,29 @@
-import { Database } from "bun:sqlite";
+import { getPoints, getArtists } from "./db.js";
 
-const db = new Database("db.sqlite", { create: true });
-db.query(
-  `CREATE TABLE IF NOT EXISTS embeddings (
-  id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT UNIQUE, artist TEXT,
-  projection_batch_x REAL, projection_batch_y REAL
-)`
-).run();
+const ARTIST = "Albrecht_Durer";
+const corsHeaders = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+};
 
-const artists = new Database("artists.sqlite", { create: true });
-artists
-  .query(
-    `CREATE TABLE IF NOT EXISTS artists (
-      id INTEGER PRIMARY KEY,
-      name TEXT,
-      years TEXT,
-      genre TEXT,
-      nationality TEXT,
-      bio TEXT,
-      wikipedia TEXT,
-      paintings INTEGER
-    ) `
-  )
-  .run();
+const serve = (input) =>
+  typeof input === "string"
+    ? () => Bun.file(input)
+    : () => JSON.stringify(input);
 
-const getPoints = () =>
-  db
-    .query(
-      `SELECT filename, artist, projection_batch_x x, projection_batch_y y 
-       FROM embeddings 
-       WHERE filename GLOB 'Albrecht_Durer_[1-5].avif'
-       ORDER BY filename`
-    )
-    .all();
-
-const getArtists = () =>
-  artists
-    .query(
-      `SELECT name, years, genre, nationality, bio, wikipedia, paintings
-       FROM artists
-       WHERE name = 'Albrecht Durer'
-       ORDER BY name`
-    )
-    .all();
+const routes = {
+  "/api/points": serve(getPoints(ARTIST)),
+  "/api/artists": serve(getArtists()),
+  "/": serve("index.html"),
+  "/client.js": serve("client.js"),
+  "/favicon.ico": serve("favicon.ico"),
+};
 
 Bun.serve({
   port: 3000,
-  fetch(req) {
-    const url = new URL(req.url);
-
-    if (url.pathname === "/api/points") {
-      return new Response(JSON.stringify(getPoints()), {
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      });
-    }
-    if (url.pathname === "/api/artists") {
-      return new Response(JSON.stringify(getArtists()), {
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      });
-    }
-    if (url.pathname === "/") {
-      return new Response(Bun.file("index.html"));
-    }
-
-    if (url.pathname === "/client.js") {
-      return new Response(Bun.file("client.js"));
-    }
-
-    if (url.pathname === "/favicon.ico") {
-      return new Response(Bun.file("favicon.ico"));
-    }
-
-    return new Response("Not Found", { status: 404 });
-  },
+  fetch: (req) =>
+    new Response(routes[new URL(req.url).pathname]?.() || "Not Found", {
+      status: routes[new URL(req.url).pathname] ? 200 : 404,
+      headers: req.url.includes("/api/") ? corsHeaders : {},
+    }),
 });

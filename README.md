@@ -30,3 +30,7 @@ do umap and tsne
 for this to work
 need to get all the other files into this project
 auweier
+
+now get database functions to behave for each file that uses it.
+get embeddings for dimensionality reduction
+get points for server

@@ -26,16 +26,18 @@ artists
   )
   .run();
 
+// get points for server
 const getPoints = (artist) =>
   db
     .query(
       `SELECT filename, artist, projection_batch_x x, projection_batch_y y 
        FROM embeddings 
-       WHERE filename GLOB '${artist}_[1-5].avif'
+       WHERE artist = ?
        `
     )
-    .all();
+    .all(artist);
 
+// get artists for server
 const getArtists = () =>
   artists
     .query(
@@ -43,4 +45,20 @@ const getArtists = () =>
     )
     .all();
 
-export { getPoints, getArtists };
+// get embeddings for dimensionality reduction
+const getEmbeddings = () => {
+  const db = new Database("db.sqlite", { readonly: true });
+  const rows = db
+    .query(
+      `
+    SELECT id, filename, artist, embedding 
+    FROM embeddings 
+    LIMIT 8000
+  `
+    )
+    .all();
+  db.close();
+  return rows;
+};
+
+export { getPoints, getArtists, getEmbeddings };

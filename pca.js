@@ -1,5 +1,6 @@
 import { PCA } from "ml-pca";
 
+// dimensionality reduction for batch of embeddings
 export const dimensionalityReductionBatch = (data, pcaModel = null) => {
   // Basic validation
   if (!data?.length) {
@@ -20,6 +21,9 @@ export const dimensionalityReductionBatch = (data, pcaModel = null) => {
   // Flatten each embedding into rows of length 32 for PCA
   const matrix = data.flatMap(({ embedding }) => {
     const arr = [...new Float32Array(embedding)];
+    // Split the embedding array into rows of 32 elements each
+    // This creates a 2D matrix where each row has 32 features
+    // If the last row is incomplete, it will be padded with undefined values
     return Array.from({ length: Math.ceil(arr.length / 32) }, (_, i) =>
       arr.slice(i * 32, i * 32 + 32)
     );

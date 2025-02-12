@@ -2,98 +2,75 @@ import {
   updateDimensions,
   updateScales,
   initScalesAndZoom,
-  getPointCoords,
-  getPointBounds,
-  drawPoint,
   drawAllPoints,
-} from "./d3.js"; // Your D3 & canvas drawing functions
-
+} from "./d3.js";
 import {
-  loadImage,
   loadImagesForPoints,
   getCoordinates,
-  isInBounds,
   findClickedPoint,
-  updateArtistFields,
   loadAndDisplayArtist,
-} from "./load.js"; // The extracted image/event-handling functions
+} from "./load.js";
 
-(async () => {
-  // Grab required DOM elements.
-  const canvas = document.getElementById("canvas");
-  const context = canvas.getContext("2d");
-  const resizedPane = document.getElementById("resized");
-  const html = document.documentElement;
+document.addEventListener("DOMContentLoaded", async () => {
+  // Get DOM elements and set parameters.
+  const canvas = document.getElementById("canvas"),
+    ctx = canvas.getContext("2d"),
+    resizedPane = document.getElementById("resized"),
+    html = document.documentElement,
+    margin = 40;
 
-  // 1. Set up the canvas dimensions.
-  let dimensions = updateDimensions(canvas);
+  // Set canvas dimensions.
+  let dims = updateDimensions(canvas);
 
-  // 2. Fetch point data.
-  const pointsResponse = await fetch("/api/points");
-  if (!pointsResponse.ok) throw new Error(pointsResponse.statusText);
-  const points = await pointsResponse.json();
+  // Fetch point data.
+  const res = await fetch("/api/points");
+  if (!res.ok) throw new Error(res.statusText);
+  const points = await res.json();
   console.log(`Total points received: ${points.length}`);
 
-  // 3. Load thumbnail images and attach them (mutates the points).
+  // Load thumbnails for each point.
   await loadImagesForPoints(points);
 
-  // 4. Set up and maintain the current D3 zoom transform.
+  // Set up zoom handling.
   let currentTransform = d3.zoomIdentity;
-  const onZoom = (transform) => {
-    currentTransform = transform;
-    drawAllPoints(
-      context,
-      points,
-      xScale,
-      yScale,
-      dimensions,
-      currentTransform
-    );
+  const onZoom = (t) => {
+    currentTransform = t;
+    drawAllPoints(ctx, points, scales.x, scales.y, dims, t);
   };
 
-  // 5. Initialize D3 scales and zoom behavior.
-  const margin = 40;
+  // Initialize scales and attach zoom behavior.
   const { xScale, yScale } = initScalesAndZoom(
     canvas,
     points,
     margin,
-    dimensions,
+    dims,
     onZoom
   );
+  const scales = { x: xScale, y: yScale };
 
-  // 6. Perform the initial drawing of all points.
-  drawAllPoints(context, points, xScale, yScale, dimensions, currentTransform);
+  // Initial drawing.
+  drawAllPoints(ctx, points, scales.x, scales.y, dims, currentTransform);
 
-  // 7. Install event listener on the canvas for hit detection.
+  // Handle canvas clicks: convert click coordinates, detect hit, and load artist details.
   canvas.addEventListener("click", async (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const coords = getCoordinates(e.clientX, e.clientY, currentTransform, rect);
-    const clickedPoint = findClickedPoint(points, coords);
-    if (clickedPoint) {
-      console.log("Splitting viewport...");
+    const rect = canvas.getBoundingClientRect(),
+      coords = getCoordinates(e.clientX, e.clientY, currentTransform, rect),
+      pt = findClickedPoint(points, coords);
+    if (pt) {
       html.classList.add("show-resized");
-      await loadAndDisplayArtist(clickedPoint);
+      await loadAndDisplayArtist(pt);
     }
   });
 
-  // 8. Install event listener on the resized pane to hide the artist display.
-  resizedPane.addEventListener("click", ({ target }) => {
-    if (target === resizedPane) {
-      html.classList.remove("show-resized");
-    }
+  // Hide artist info when clicking outside the image.
+  resizedPane.addEventListener("click", (e) => {
+    if (e.target === resizedPane) html.classList.remove("show-resized");
   });
 
-  // 9. On window resize, update dimensions, scales, and redraw the canvas.
+  // Update canvas and redraw on window resize.
   window.addEventListener("resize", () => {
-    dimensions = updateDimensions(canvas);
-    updateScales(xScale, yScale, dimensions, margin);
-    drawAllPoints(
-      context,
-      points,
-      xScale,
-      yScale,
-      dimensions,
-      currentTransform
-    );
+    dims = updateDimensions(canvas);
+    updateScales(scales.x, scales.y, dims, margin);
+    drawAllPoints(ctx, points, scales.x, scales.y, dims, currentTransform);
   });
-})();
+});

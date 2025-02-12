@@ -17,6 +17,7 @@ const routes = {
   "/": serve("index.html"),
   "/client.js": serve("client.js"),
   "/d3.js": serve("d3.js"),
+  "/load.js": serve("load.js"),
   "/favicon.ico": serve("favicon.ico"),
 };
 

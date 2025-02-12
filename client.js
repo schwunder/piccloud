@@ -6,112 +6,19 @@ import {
   getPointBounds,
   drawPoint,
   drawAllPoints,
-} from "./d3.js";
+} from "./d3.js"; // Your D3 & canvas drawing functions
+
+import {
+  loadImage,
+  loadImagesForPoints,
+  getCoordinates,
+  isInBounds,
+  findClickedPoint,
+  updateArtistFields,
+  loadAndDisplayArtist,
+} from "./load.js"; // The extracted image/event-handling functions
 
 (async () => {
-  /* ============================================================
-   * PART B: IMAGE LOADING & EVENT HANDLING PIPELINE
-   * ============================================================
-   * This section handles:
-   *  - Loading images and attaching thumbnails (mutating the points).
-   *  - Converting raw mouse events into canvas coordinates.
-   *  - Hit detection and, if a point is clicked, loading & displaying
-   *    a resized image and updating artist info in the DOM.
-   * ============================================================
-   */
-
-  // Load a single image (either a thumbnail or a resized version).
-  const loadImage = (filename, isResized = false) =>
-    new Promise((resolve, reject) => {
-      const img = new Image();
-      img.src = `http://localhost:3001/${
-        isResized ? "resized" : "thumbnails"
-      }/${filename}`;
-      img.onload = () => resolve(img);
-      img.onerror = (err) => reject(`Failed to load ${filename}: ${err}`);
-    });
-
-  // Load thumbnail images for all points and attach them.
-  // (This function mutates the points by adding a `thumb` property.)
-  const loadImagesForPoints = async (points) => {
-    const thumbnails = await Promise.all(
-      points.map((p) => loadImage(p.filename))
-    );
-    points.forEach((point, i) => {
-      point.thumb = thumbnails[i];
-    });
-    return points;
-  };
-
-  // Convert client (mouse) coordinates into untransformed canvas coordinates.
-  const getCoordinates = (clientX, clientY, transform, rect) => ({
-    x: (clientX - rect.left - transform.x) / transform.k,
-    y: (clientY - rect.top - transform.y) / transform.k,
-  });
-
-  // Check if (x, y) is within a given bounding box.
-  const isInBounds = (x, y, bounds) =>
-    x >= bounds.x &&
-    x <= bounds.x + bounds.width &&
-    y >= bounds.y &&
-    y <= bounds.y + bounds.height;
-
-  // Find the first point whose bounds contain the given coordinates.
-  const findClickedPoint = (points, coords) =>
-    points.find((point) => isInBounds(coords.x, coords.y, point.bounds));
-
-  // Update DOM fields with the artist's data.
-  const updateArtistFields = (artist) => {
-    const fields = [
-      "bio",
-      "genre",
-      "name",
-      "nationality",
-      "paintings",
-      "wikipedia",
-      "years",
-    ];
-    fields.forEach((field) => {
-      const el = document.getElementById(field);
-      if (el) {
-        el.textContent = artist[field] || "";
-      }
-    });
-  };
-
-  // Load a resized image and artist data, then update the artist display.
-  const loadAndDisplayArtist = async (clickedPoint) => {
-    const imageElement = document.getElementById("image");
-    imageElement.innerHTML = "<p>Loading resized image...</p>";
-    try {
-      const [resizedImg, artists] = await Promise.all([
-        loadImage(clickedPoint.filename, true),
-        fetch("/api/artists").then((res) => {
-          if (res.ok) return res.json();
-          throw new Error(res.statusText);
-        }),
-      ]);
-      imageElement.innerHTML = "";
-      imageElement.appendChild(resizedImg);
-      const artist = artists.find((a) => a.name === clickedPoint.artist);
-      if (artist) {
-        updateArtistFields(artist);
-      }
-    } catch (err) {
-      console.error(err);
-      imageElement.textContent = `Error loading ${clickedPoint.filename}: ${err}`;
-    }
-  };
-
-  /* ============================================================
-   * MAIN COMPOSITION: ASSEMBLE THE PIPELINES
-   * ============================================================
-   * This section ties together the two pipelines.
-   * It sets up the canvas and D3 zoom, loads the images,
-   * draws the points, and installs the event listeners.
-   * ============================================================
-   */
-
   // Grab required DOM elements.
   const canvas = document.getElementById("canvas");
   const context = canvas.getContext("2d");

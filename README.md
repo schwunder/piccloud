@@ -42,3 +42,6 @@ get points for server
 // rename projection_x and projection_y to pca x and y
 // make it an number[]
 // update pca.js
+
+clearedValues new Table with new Schema or just add new projection
+new schema new Table

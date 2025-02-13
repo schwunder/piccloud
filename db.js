@@ -51,7 +51,7 @@ const getEmbeddings = () => {
   const rows = db
     .query(
       `
-    SELECT id, filename, artist, embedding 
+    SELECT id, embedding 
     FROM embeddings 
     LIMIT 8000
   `

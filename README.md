@@ -34,3 +34,11 @@ auweier
 now get database functions to behave for each file that uses it.
 get embeddings for dimensionality reduction
 get points for server
+
+// before that clean db
+// new schema
+// add projection umap x and y
+// remove single projcetion from db
+// rename projection_x and projection_y to pca x and y
+// make it an number[]
+// update pca.js

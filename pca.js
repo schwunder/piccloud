@@ -1,5 +1,5 @@
 import { PCA } from "ml-pca";
-
+import { getEmbeddings, updatePcaProjections } from "./db.js";
 // dimensionality reduction for batch of embeddings
 export const dimensionalityReductionBatch = (data, pcaModel = null) => {
   // Basic validation
@@ -9,11 +9,12 @@ export const dimensionalityReductionBatch = (data, pcaModel = null) => {
   for (const item of data) {
     if (
       !item.id ||
+      !item.filename ||
       !item.embedding ||
       !(item.embedding instanceof Uint8Array)
     ) {
       throw new TypeError(
-        "Each item must have 'id' and a Uint8Array 'embedding'."
+        "Each item must have 'id', 'filename', and a Uint8Array 'embedding'."
       );
     }
   }
@@ -35,5 +36,20 @@ export const dimensionalityReductionBatch = (data, pcaModel = null) => {
   const points = Array.isArray(proj) ? proj : proj.to2DArray();
 
   // Return each item's 2D projection
-  return data.map((item, i) => ({ id: item.id, projection: points[i] }));
+  return data.map((item, i) => ({
+    id: item.id,
+    filename: item.filename,
+    projection: points[i],
+  }));
 };
+
+const main = () => {
+  const embeddings = getEmbeddings();
+  console.log(embeddings);
+  const pca = dimensionalityReductionBatch(embeddings);
+  console.log(pca);
+  const updated = updatePcaProjections(pca);
+  console.log(updated);
+};
+
+main();

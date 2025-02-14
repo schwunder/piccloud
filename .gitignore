@@ -8,3 +8,4 @@ backup
 *.lock
 *.lockb
 node_modules
+.vscode

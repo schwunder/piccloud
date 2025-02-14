@@ -68,7 +68,7 @@ const getArtists = () => {
 
 // get embeddings for dimensionality reduction
 const getEmbeddings = () => {
-  return art
+  const rows = art
     .query(
       `
     SELECT id, filename, embedding 
@@ -76,6 +76,35 @@ const getEmbeddings = () => {
   `
     )
     .all();
+
+  return rows
+    .map((row) => {
+      // Convert BLOB to Float32Array
+      const buffer = row.embedding;
+      if (!buffer) {
+        console.error(`No embedding found for ${row.filename}`);
+        return null;
+      }
+
+      try {
+        // SQLite BLOB to Float32Array
+        const embedding = new Float32Array(
+          buffer.buffer,
+          buffer.byteOffset,
+          buffer.length / Float32Array.BYTES_PER_ELEMENT
+        );
+
+        return {
+          id: row.id,
+          filename: row.filename,
+          embedding,
+        };
+      } catch (e) {
+        console.error(`Error converting embedding for ${row.filename}:`, e);
+        return null;
+      }
+    })
+    .filter(Boolean); // Remove null entries
 };
 
 const updatePcaProjections = (idsandfilenamesandprojections) => {

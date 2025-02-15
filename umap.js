@@ -22,6 +22,3 @@ const main = () => {
 };
 
 main();
-
-// works
-// use main to fill db

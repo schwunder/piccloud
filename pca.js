@@ -4,8 +4,7 @@ import { getEmbeddings, updatePcaProjections } from "./db.js";
 
 const performPCA = (data) => {
   const pca = new PCA(data);
-  const proj = pca.predict(data, { nComponents: 2 });
-  return proj;
+  return pca.predict(data, { nComponents: 2 });
 };
 
 const main = () => {

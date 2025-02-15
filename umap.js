@@ -1,5 +1,5 @@
 import { UMAP } from "umap-js";
-import { getEmbeddings } from "./db";
+import { getEmbeddings, updateUmapProjections } from "./db";
 
 // Create a function to initialize UMAP with parameters
 const performUMAP = (data) => {
@@ -10,8 +10,15 @@ const performUMAP = (data) => {
 const main = () => {
   const data = getEmbeddings();
   const embeddings = data.map((item) => item.embedding);
-  const umap = performUMAP(embeddings); // Call the initialization function
-  console.log(umap);
+  const projections = performUMAP(embeddings); // Call the initialization function
+  console.log(projections);
+  const projectedData = data.map((item, index) => ({
+    id: item.id,
+    filename: item.filename,
+    projection: projections[index],
+  }));
+  const updated = updateUmapProjections(projectedData);
+  console.log(updated);
 };
 
 main();

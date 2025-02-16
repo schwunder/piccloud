@@ -102,3 +102,6 @@ Future Considerations:
 [ ] Keep clustering methods agnostic, but consider metadata-aware approaches
 [ ] Develop better tools to analyze and interpret clustering results
 [ ] Keep the system ready for potential client integration
+
+
+Use `calculateCentroid` when aligning overlapping batches in incremental t-SNE/UMAP, centering clusters for visualization, or normalizing offsets in dynamic layouts. Not needed for PCA since it preserves global structure.

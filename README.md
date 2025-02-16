@@ -45,3 +45,60 @@ get points for server
 
 clearedValues new Table with new Schema or just add new projection
 new schema new Table
+
+
+Clustering & Dimensionality Reduction Project
+
+What I Already Have:
+[ ] Three clustering dimensionality reduction algorithms: PCA, UMAP, and t-SNE
+[ ] A database with 8,500 picture sets sorted by 50 famous artists like Van Gogh and Rembrandt
+[ ] Metadata for images, including classification into art movements such as Impressionism and Cubism
+[ ] A server that serves index.html and the client
+[ ] Configuration files, including bun.lockb, package.json, and the Caddyfile (a simplified JSON-like format)
+[ ] The favicon is in the root but should be in public
+[ ] Four scripts: a D3.js script, UMAP script, PCA script, and t-SNE script
+[ ] Writing t-SNE data values into the database
+[ ] Basic validation and verification of PCA, t-SNE, and UMAP outputs
+[ ] Ensuring clustering is meaningful and corresponds to artists or metadata classifications
+[ ] Tools for manual and intuitive verification
+[ ] Scaling and formatting clustering output for D3.js visualization
+
+Implementation Queue
+
+Code Organization & Structuring (2-3 hours)
+This lays the foundation for everything else, making subsequent tasks easier to maintain and debug.
+[ ] Consolidate some functionality into a single file
+[ ] Add comments for clarity
+[ ] Consolidate database operations into functions
+[ ] Parameterize functions but keep them hard-coded and efficient
+[ ] Keep everything minimal in lines of code
+[ ] Improve code structuring and folding in the IDE
+Server & Configuration Updates (1-2 hours)
+After code organization, it will be simpler to move files around, set up reverse proxying, and serve content properly.
+[ ] Move favicon.ico to the public folder
+[ ] Serve index.html, scripts, and assets correctly from the server
+[ ] Organize configuration files (bun.lockb, package.json, Caddyfile) for readability
+[ ] Try reverse proxying in the Caddy file
+Algorithm Integration & Validation (3-4 hours)
+With the codebase and server structures stable, integrate the algorithms cleanly and verify the outputs.
+[ ] Store t-SNE outputs in the database
+[ ] Validate or verify PCA, t-SNE, and UMAP outputs
+[ ] Ensure clustering results are meaningful
+[ ] Develop algorithmic verification tools alongside manual checks
+[ ] Make sure clustering output is well-formatted for D3.js
+[ ] Confirm that clusters match metadata (e.g., Impressionism vs. Cubism)
+MCP Server & Debugging (2 hours)
+Once the main functionality is in place, set up debugging tools to streamline testing.
+[ ] Configure MCP servers
+[ ] Handle cursor ID
+[ ] Check if a Chrome extension for MCP debugging works in Orion Browser
+[ ] Verify the extension packs front-end output and DOM data into the cursor ID
+Research & Documentation (1-2 hours)
+Finally, document everything so future iterations and integrations are smoother.
+[ ] Research and document PCA, UMAP, and t-SNE
+[ ] Explore D3.js for visualization details
+[ ] Document best practices for clustering verification
+Future Considerations:
+[ ] Keep clustering methods agnostic, but consider metadata-aware approaches
+[ ] Develop better tools to analyze and interpret clustering results
+[ ] Keep the system ready for potential client integration

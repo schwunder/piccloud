@@ -4,7 +4,7 @@ public/resized/*
 favicon.ico
 *.bak
 backup
-*test.js
+*.test.js
 *.lock
 *.lockb
 node_modules

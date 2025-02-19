@@ -67,25 +67,25 @@ Implementation Queue
 
 Code Organization & Structuring (2-3 hours)
 This lays the foundation for everything else, making subsequent tasks easier to maintain and debug.
-[ ] Consolidate some functionality into a single file
-[ ] Add comments for clarity
-[ ] Consolidate database operations into functions
-[ ] Parameterize functions but keep them hard-coded and efficient
-[ ] Keep everything minimal in lines of code
+[√ ] Consolidate some functionality into a single file
+[√ ] Add comments for clarity
+[√ ] Consolidate database operations into functions
+[√ ] Parameterize functions but keep them hard-coded and efficient
+[√ ] Keep everything minimal in lines of code
 [ ] Improve code structuring and folding in the IDE
 Server & Configuration Updates (1-2 hours)
 After code organization, it will be simpler to move files around, set up reverse proxying, and serve content properly.
-[ ] Move favicon.ico to the public folder
-[ ] Serve index.html, scripts, and assets correctly from the server
+[√ ] Move favicon.ico to the public folder
+[√ ] Serve index.html, scripts, and assets correctly from the server
 [ ] Organize configuration files (bun.lockb, package.json, Caddyfile) for readability
 [ ] Try reverse proxying in the Caddy file
 Algorithm Integration & Validation (3-4 hours)
 With the codebase and server structures stable, integrate the algorithms cleanly and verify the outputs.
-[ ] Store t-SNE outputs in the database
-[ ] Validate or verify PCA, t-SNE, and UMAP outputs
-[ ] Ensure clustering results are meaningful
-[ ] Develop algorithmic verification tools alongside manual checks
-[ ] Make sure clustering output is well-formatted for D3.js
+[√ ] Store t-SNE outputs in the database
+[ √] Validate or verify PCA, t-SNE, and UMAP outputs
+[√ ] Ensure clustering results are meaningful
+[√ ] Develop algorithmic verification tools alongside manual checks
+[ √] Make sure clustering output is well-formatted for D3.js
 [ ] Confirm that clusters match metadata (e.g., Impressionism vs. Cubism)
 MCP Server & Debugging (2 hours)
 Once the main functionality is in place, set up debugging tools to streamline testing.

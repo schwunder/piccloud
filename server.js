@@ -18,14 +18,15 @@ const routes = {
   "/client.js": serve("client.js"),
   "/d3.js": serve("d3.js"),
   "/load.js": serve("load.js"),
-  "/favicon.ico": serve("favicon.ico"),
+  "/favicon.ico": serve("public/favicon.ico"),
 };
 
 Bun.serve({
   port: 3000,
   fetch: (req) =>
-    new Response(routes[new URL(req.url).pathname]?.() || "Not Found", {
-      status: routes[new URL(req.url).pathname] ? 200 : 404,
+    routes[new URL(req.url).pathname]?.() ||
+    new Response("Not Found", {
+      status: 404,
       headers: req.url.includes("/api/") ? corsHeaders : {},
     }),
 });

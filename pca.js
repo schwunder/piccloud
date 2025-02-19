@@ -1,5 +1,5 @@
 import { PCA } from "ml-pca";
-import { getEmbeddings, updatePcaProjections } from "./db.js";
+import { getEmbeddings, updateProjections } from "./db.js";
 // dimensionality reduction for batch of embeddings
 
 const performPCA = (data) => {
@@ -19,7 +19,7 @@ const main = () => {
     filename: item.filename,
     projection: projArray[index],
   }));
-  const updated = updatePcaProjections(projectedData);
+  const updated = updateProjections(projectedData, "pca");
   console.log(updated);
 };
 

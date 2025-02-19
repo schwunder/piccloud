@@ -107,10 +107,10 @@ const getEmbeddings = () => {
     .filter(Boolean); // Remove null entries
 };
 
-const updatePcaProjections = (idsandfilenamesandprojections) => {
+const updateProjections = (idsandfilenamesandprojections, projectionType) => {
   const query = `
   UPDATE projections 
-  SET pca_projection = ? 
+  SET ${projectionType}_projection = ? 
   WHERE filename = ?
   `;
 
@@ -132,74 +132,9 @@ const updatePcaProjections = (idsandfilenamesandprojections) => {
     })();
     return true;
   } catch (error) {
-    console.error("Error updating PCA projections:", error);
+    console.error(`Error updating ${projectionType} projections:`, error);
     return false;
   }
 };
 
-const updateUmapProjections = (idsandfilenamesandprojections) => {
-  const query = `
-  UPDATE projections 
-  SET umap_projection = ? 
-  WHERE filename = ?
-  `;
-  try {
-    art.transaction(() => {
-      const stmt = art.prepare(query);
-      for (const {
-        id,
-        filename,
-        projection,
-      } of idsandfilenamesandprojections) {
-        if (!filename || !projection) {
-          throw new Error(`Invalid data: missing filename or projection`);
-        }
-        // Serialize the projection array to JSON before storing
-        const serializedProjection = JSON.stringify(projection);
-        stmt.run(serializedProjection, filename);
-      }
-    })();
-    return true;
-  } catch (error) {
-    console.error("Error updating UMAP projections:", error);
-    return false;
-  }
-};
-
-const updateTsneProjections = (idsandfilenamesandprojections) => {
-  const query = `
-  UPDATE projections 
-  SET tsne_projection = ? 
-  WHERE filename = ?
-  `;
-  try {
-    art.transaction(() => {
-      const stmt = art.prepare(query);
-      for (const {
-        id,
-        filename,
-        projection,
-      } of idsandfilenamesandprojections) {
-        if (!filename || !projection) {
-          throw new Error(`Invalid data: missing filename or projection`);
-        }
-        // Serialize the projection array to JSON before storing
-        const serializedProjection = JSON.stringify(projection);
-        stmt.run(serializedProjection, filename);
-      }
-    })();
-    return true;
-  } catch (error) {
-    console.error("Error updating t-SNE projections:", error);
-    return false;
-  }
-};
-
-export {
-  getPoints,
-  getArtists,
-  getEmbeddings,
-  updatePcaProjections,
-  updateUmapProjections,
-  updateTsneProjections,
-};
+export { getPoints, getArtists, getEmbeddings, updateProjections };

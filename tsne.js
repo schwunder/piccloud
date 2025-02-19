@@ -1,5 +1,5 @@
 import TSNE from "tsne-js";
-import { getEmbeddings, updateTsneProjections } from "./db.js";
+import { getEmbeddings, updateProjections } from "./db.js";
 
 const performTSNE = (data) => {
   const model = new TSNE();
@@ -27,7 +27,7 @@ const main = async () => {
     projection: projections[index], // Map projection using index
   }));
   console.log(projectedData);
-  console.log(updateTsneProjections(projectedData));
+  console.log(updateProjections(projectedData, "tsne"));
 };
 
 main();

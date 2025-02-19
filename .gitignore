@@ -4,8 +4,8 @@ public/resized/*
 favicon.ico
 *.bak
 backup
-*.test.js
 *.lock
 *.lockb
 node_modules
 .vscode
+*.test.js

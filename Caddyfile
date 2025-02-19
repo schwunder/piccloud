@@ -1,6 +1,6 @@
 # Port 3001 - Static File Server
 :3001 {
-    root * public
+    root * assets
     file_server {
         browse
         precompressed zstd

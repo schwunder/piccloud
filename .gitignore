@@ -1,5 +1,6 @@
-public/thumbnails/*
-public/resized/*
+assets/thumbnails/*
+assets/resized/*
+public/favicon.ico
 *.sqlite
 favicon.ico
 *.bak

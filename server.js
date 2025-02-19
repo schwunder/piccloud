@@ -14,7 +14,7 @@ const serve = (input) =>
 const routes = {
   "/api/points": serve(getPoints(ARTIST)),
   "/api/artists": serve(getArtists()),
-  "/": serve("index.html"),
+  "/": serve("public/index.html"),
   "/client.js": serve("client.js"),
   "/d3.js": serve("d3.js"),
   "/load.js": serve("load.js"),

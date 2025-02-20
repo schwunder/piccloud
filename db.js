@@ -38,10 +38,10 @@ art
   .run();
 
 // get points for server
-const getPoints = (artist) => {
+const getPoints = (artist, projectionType) => {
   const points = art
     .query(
-      `SELECT filename, artist, pca_projection 
+      `SELECT filename, artist, ${projectionType}_projection 
        FROM projections 
        WHERE artist = ?
        `
@@ -51,8 +51,8 @@ const getPoints = (artist) => {
   // Parse the JSON stored PCA projections
   return points.map((point) => ({
     ...point,
-    pca_projection: point.pca_projection
-      ? JSON.parse(point.pca_projection)
+    projection: point[projectionType + "_projection"]
+      ? JSON.parse(point[projectionType + "_projection"])
       : null,
   }));
 };

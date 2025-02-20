@@ -1,6 +1,5 @@
 import { getPoints, getArtists } from "./db.js";
 
-const ARTIST = "Albrecht_Durer";
 const corsHeaders = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
@@ -8,11 +7,14 @@ const corsHeaders = {
 
 const serve = (input) =>
   typeof input === "string"
-    ? () => Bun.file(input)
-    : () => JSON.stringify(input);
+    ? () => new Response(Bun.file(input))
+    : () =>
+        new Response(JSON.stringify(input), {
+          headers: { "Content-Type": "application/json" },
+        });
 
 const routes = {
-  "/api/points": serve(getPoints(ARTIST)),
+  "/api/points": serve(getPoints("Albrecht_Durer", "umap")),
   "/api/artists": serve(getArtists()),
   "/": serve("public/index.html"),
   "/client.js": serve("public/client.js"),

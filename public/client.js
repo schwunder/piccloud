@@ -24,7 +24,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Fetch point data.
   const res = await fetch("/api/points");
-  console.log("Response:", res);
   if (!res.ok) throw new Error(res.statusText);
   const points = await res.json();
   console.log(`Total points received: ${points.length}`);
@@ -52,7 +51,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Initial drawing.
   drawAllPoints(ctx, points, scales.x, scales.y, dims, currentTransform);
 
-  // Handle canvas clicks: convert click coordinates, detect hit, and load artist details.
+  // Handle canvas clicks.
   canvas.addEventListener("click", async (e) => {
     const rect = canvas.getBoundingClientRect(),
       coords = getCoordinates(e.clientX, e.clientY, currentTransform, rect),

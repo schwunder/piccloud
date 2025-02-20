@@ -1,40 +1,27 @@
-import { getPoints, getArtists } from "./db.js";
-
-const corsHeaders = {
-  "Content-Type": "application/json",
-  "Access-Control-Allow-Origin": "*",
-};
-
-const serve = (input) =>
-  typeof input === "string"
-    ? () => new Response(Bun.file(input))
-    : () =>
-        new Response(JSON.stringify(input), {
-          headers: { "Content-Type": "application/json" },
-        });
-
-const routes = {
-  "/api/points": () => {
-    const points = getPoints("Albrecht Durer", "umap", 5);
-    console.log("Server sending points:", points);
-    return new Response(JSON.stringify(points), {
-      headers: corsHeaders,
-    });
-  },
-  "/api/artists": serve(getArtists()),
-  "/": serve("public/index.html"),
-  "/client.js": serve("public/client.js"),
-  "/d3.js": serve("public/d3.js"),
-  "/load.js": serve("public/load.js"),
-  "/favicon.ico": serve("public/favicon.ico"),
-};
+import { getPoints as points, getArtists as artists } from "./db.js";
 
 Bun.serve({
   port: 3000,
-  fetch: (req) =>
-    routes[new URL(req.url).pathname]?.() ||
-    new Response("Not Found", {
-      status: 404,
-      headers: req.url.includes("/api/") ? corsHeaders : {},
-    }),
+  fetch: (req) => {
+    const path = new URL(req.url).pathname;
+
+    if (!path.startsWith("/api/")) {
+      return new Response(
+        Bun.file("public" + ((path === "/" && "/index.html") || path))
+      );
+    }
+
+    const handlers = {
+      points: () => points("Albrecht Durer", "umap", 5),
+      artists,
+    };
+    const key = path.slice(5);
+
+    return new Response(JSON.stringify(handlers[key]()), {
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
+  },
 });

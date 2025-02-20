@@ -52,7 +52,7 @@ art
  * Retrieves points for a given artist using the specified projection type.
  * JSON-encoded projection data is safely parsed into JavaScript objects.
  */
-const getPoints = (artist, projectionType, limit = null) => {
+const points = (artist, projectionType, limit = null) => {
   const count = art.query("SELECT COUNT(*) as count FROM projections").get();
   console.log(`Total records in projections: ${count.count}`);
 
@@ -96,7 +96,7 @@ const getPoints = (artist, projectionType, limit = null) => {
 /**
  * Retrieves all artists from the database.
  */
-const getArtists = () => {
+const artists = () => {
   return art
     .query(
       `
@@ -114,32 +114,20 @@ const getEmbeddings = () => {
   const rows = art
     .query(
       `
-    SELECT id, filename, embedding 
+    SELECT filename, embedding 
     FROM embeddings
   `
     )
     .all();
 
-  return rows
-    .map((row) => {
-      const buffer = row.embedding;
-      if (!buffer) {
-        console.error(`No embedding found for ${row.filename}`);
-        return null;
-      }
-      try {
-        const embedding = new Float32Array(
-          buffer.buffer,
-          buffer.byteOffset,
-          buffer.length / Float32Array.BYTES_PER_ELEMENT
-        );
-        return { id: row.id, filename: row.filename, embedding };
-      } catch (e) {
-        console.error(`Error converting embedding for ${row.filename}:`, e);
-        return null;
-      }
-    })
-    .filter(Boolean);
+  return rows.map(({ filename, embedding: buffer }) => ({
+    filename,
+    embedding: new Float32Array(
+      buffer.buffer,
+      buffer.byteOffset,
+      buffer.length / Float32Array.BYTES_PER_ELEMENT
+    ),
+  }));
 };
 
 /**
@@ -170,4 +158,4 @@ const updateProjections = (dataArray, projectionType) => {
   }
 };
 
-export { getPoints, getArtists, getEmbeddings, updateProjections };
+export { points, artists, getEmbeddings, updateProjections };

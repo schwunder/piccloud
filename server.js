@@ -1,4 +1,4 @@
-import { getPoints as points, getArtists as artists } from "./db.js";
+import { points, artists } from "./db.js";
 
 Bun.serve({
   port: 3000,

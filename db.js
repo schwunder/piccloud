@@ -1,150 +1,166 @@
 import { Database } from "bun:sqlite";
 
+// Initialize the database (creating tables if needed)
 const art = new Database("art.sqlite", { create: true });
 
 art
   .query(
-    `CREATE TABLE IF NOT EXISTS embeddings (
+    `
+  CREATE TABLE IF NOT EXISTS embeddings (
     id INTEGER PRIMARY KEY AUTOINCREMENT, 
     filename TEXT UNIQUE, 
     artist TEXT,
     embedding BLOB
-  )`
+  )
+`
   )
   .run();
 
 art
   .query(
-    `CREATE TABLE IF NOT EXISTS artists (
+    `
+  CREATE TABLE IF NOT EXISTS artists (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE, years TEXT, genre TEXT,
-    nationality TEXT, bio TEXT,
-    wikipedia TEXT, paintings INTEGER
-  )`
+    name TEXT UNIQUE, 
+    years TEXT, 
+    genre TEXT,
+    nationality TEXT, 
+    bio TEXT,
+    wikipedia TEXT, 
+    paintings INTEGER
+  )
+`
   )
   .run();
 
 art
   .query(
-    `CREATE TABLE IF NOT EXISTS projections (
+    `
+  CREATE TABLE IF NOT EXISTS projections (
     id INTEGER PRIMARY KEY AUTOINCREMENT, 
     filename TEXT UNIQUE, 
     artist TEXT,
     pca_projection BLOB,
     umap_projection BLOB,
     tsne_projection BLOB
-  )`
+  )
+`
   )
   .run();
 
-// get points for server
+/**
+ * Retrieves points for a given artist using the specified projection type.
+ * JSON-encoded projection data is safely parsed into JavaScript objects.
+ */
 const getPoints = (artist, projectionType, limit = null) => {
-  // First, let's check if we have any points at all
   const count = art.query("SELECT COUNT(*) as count FROM projections").get();
-  console.log(`Total records in projections table: ${count.count}`);
+  console.log(`Total records in projections: ${count.count}`);
 
-  // Replace spaces with underscores for filename matching
+  // Convert spaces to underscores for filename matching
   const artistInFilename = artist.replace(" ", "_");
-
   const limitClause = limit ? " LIMIT ?" : "";
-  const params = [artist]; // Keep original artist name for WHERE clause
+  const params = [artist];
   if (limit) params.push(limit);
 
   const points = art
     .query(
-      `SELECT filename, artist, ${projectionType}_projection 
-       FROM projections 
-       WHERE artist = ?
-       ORDER BY CAST(REPLACE(REPLACE(filename, '${artistInFilename}_', ''), '.avif', '') AS INTEGER) ASC
-       ${limitClause}`
+      `
+      SELECT filename, artist, ${projectionType}_projection 
+      FROM projections 
+      WHERE artist = ?
+      ORDER BY CAST(REPLACE(REPLACE(filename, '${artistInFilename}_', ''), '.avif', '') AS INTEGER) ASC
+      ${limitClause}
+    `
     )
     .all(...params);
 
   console.log(`Found ${points.length} points for artist ${artist}`);
-  console.log("DB returned points:", points);
 
   const mappedPoints = points.map((point) => ({
     ...point,
     projection: point[projectionType + "_projection"]
-      ? JSON.parse(point[projectionType + "_projection"])
+      ? (() => {
+          try {
+            return JSON.parse(point[projectionType + "_projection"]);
+          } catch (e) {
+            console.error(`Error parsing projection for ${point.filename}:`, e);
+            return null;
+          }
+        })()
       : null,
   }));
 
-  console.log("DB mapped points:", mappedPoints);
   return mappedPoints;
 };
 
-// get artists for server
+/**
+ * Retrieves all artists from the database.
+ */
 const getArtists = () => {
   return art
     .query(
-      `SELECT name, years, genre, nationality, bio, wikipedia, paintings  FROM artists`
+      `
+      SELECT name, years, genre, nationality, bio, wikipedia, paintings
+      FROM artists
+    `
     )
     .all();
 };
 
-// get embeddings for dimensionality reduction
+/**
+ * Retrieves embeddings from the database and converts BLOB data to a Float32Array.
+ */
 const getEmbeddings = () => {
   const rows = art
     .query(
       `
     SELECT id, filename, embedding 
-    FROM embeddings 
+    FROM embeddings
   `
     )
     .all();
 
   return rows
     .map((row) => {
-      // Convert BLOB to Float32Array
       const buffer = row.embedding;
       if (!buffer) {
         console.error(`No embedding found for ${row.filename}`);
         return null;
       }
-
       try {
-        // SQLite BLOB to Float32Array
         const embedding = new Float32Array(
           buffer.buffer,
           buffer.byteOffset,
           buffer.length / Float32Array.BYTES_PER_ELEMENT
         );
-
-        return {
-          id: row.id,
-          filename: row.filename,
-          embedding,
-        };
+        return { id: row.id, filename: row.filename, embedding };
       } catch (e) {
         console.error(`Error converting embedding for ${row.filename}:`, e);
         return null;
       }
     })
-    .filter(Boolean); // Remove null entries
+    .filter(Boolean);
 };
 
-const updateProjections = (idsandfilenamesandprojections, projectionType) => {
+/**
+ * Updates projection data in the database.
+ * Each projection is serialized to JSON before being stored.
+ */
+const updateProjections = (dataArray, projectionType) => {
   const query = `
-  UPDATE projections 
-  SET ${projectionType}_projection = ? 
-  WHERE filename = ?
+    UPDATE projections 
+    SET ${projectionType}_projection = ? 
+    WHERE filename = ?
   `;
-
   try {
     art.transaction(() => {
       const stmt = art.prepare(query);
-      for (const {
-        id,
-        filename,
-        projection,
-      } of idsandfilenamesandprojections) {
+      for (const { filename, projection } of dataArray) {
         if (!filename || !projection) {
           throw new Error(`Invalid data: missing filename or projection`);
         }
-        // Serialize the projection array to JSON before storing
-        const serializedProjection = JSON.stringify(projection);
-        stmt.run(serializedProjection, filename);
+        const serialized = JSON.stringify(projection);
+        stmt.run(serialized, filename);
       }
     })();
     return true;

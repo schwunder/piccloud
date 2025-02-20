@@ -14,7 +14,13 @@ const serve = (input) =>
         });
 
 const routes = {
-  "/api/points": serve(getPoints("Albrecht_Durer", "umap")),
+  "/api/points": () => {
+    const points = getPoints("Albrecht Durer", "umap", 5);
+    console.log("Server sending points:", points);
+    return new Response(JSON.stringify(points), {
+      headers: corsHeaders,
+    });
+  },
   "/api/artists": serve(getArtists()),
   "/": serve("public/index.html"),
   "/client.js": serve("public/client.js"),

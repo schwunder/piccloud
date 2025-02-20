@@ -17,12 +17,12 @@ export const updateScales = (xScale, yScale, dims, margin) => {
 export const initScalesAndZoom = (canvas, points, margin, dims, onZoom) => {
   const xScale = d3
     .scaleLinear()
-    .domain(d3.extent(points, (p) => p.x))
+    .domain(d3.extent(points, (p) => p.projection[0]))
     .range([margin, dims.width - margin]);
 
   const yScale = d3
     .scaleLinear()
-    .domain(d3.extent(points, (p) => p.y))
+    .domain(d3.extent(points, (p) => p.projection[1]))
     .range([dims.height - margin, margin]);
 
   d3.select(canvas).call(
@@ -37,8 +37,8 @@ export const initScalesAndZoom = (canvas, points, margin, dims, onZoom) => {
 
 // Draw a point's image (80px square) and return its bounding box.
 const drawPoint = (ctx, point, xScale, yScale, size = 80) => {
-  const cx = xScale(point.x),
-    cy = yScale(point.y);
+  const cx = xScale(point.projection[0]),
+    cy = yScale(point.projection[1]);
   ctx.drawImage(point.thumb, cx - size / 2, cy - size / 2, size, size);
   return { x: cx - size / 2, y: cy - size / 2, width: size, height: size };
 };

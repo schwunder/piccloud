@@ -38,23 +38,40 @@ art
   .run();
 
 // get points for server
-const getPoints = (artist, projectionType) => {
+const getPoints = (artist, projectionType, limit = null) => {
+  // First, let's check if we have any points at all
+  const count = art.query("SELECT COUNT(*) as count FROM projections").get();
+  console.log(`Total records in projections table: ${count.count}`);
+
+  // Replace spaces with underscores for filename matching
+  const artistInFilename = artist.replace(" ", "_");
+
+  const limitClause = limit ? " LIMIT ?" : "";
+  const params = [artist]; // Keep original artist name for WHERE clause
+  if (limit) params.push(limit);
+
   const points = art
     .query(
       `SELECT filename, artist, ${projectionType}_projection 
        FROM projections 
        WHERE artist = ?
-       `
+       ORDER BY CAST(REPLACE(REPLACE(filename, '${artistInFilename}_', ''), '.avif', '') AS INTEGER) ASC
+       ${limitClause}`
     )
-    .all(artist);
+    .all(...params);
 
-  // Parse the JSON stored PCA projections
-  return points.map((point) => ({
+  console.log(`Found ${points.length} points for artist ${artist}`);
+  console.log("DB returned points:", points);
+
+  const mappedPoints = points.map((point) => ({
     ...point,
     projection: point[projectionType + "_projection"]
       ? JSON.parse(point[projectionType + "_projection"])
       : null,
   }));
+
+  console.log("DB mapped points:", mappedPoints);
+  return mappedPoints;
 };
 
 // get artists for server

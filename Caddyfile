@@ -6,5 +6,5 @@
         precompressed zstd
     }
     encode zstd
-    header Cache-Control "public, max-age=31536000"
+    header Cache-Control "public, max-age=300"
 }

@@ -31,7 +31,14 @@ export const isInBounds = (x, y, bounds) =>
 
 // Find the first point whose bounds contain the given coordinates.
 export const findClickedPoint = (points, coords) =>
-  points.find((p) => isInBounds(coords.x, coords.y, p.bounds));
+  points.find((p) =>
+    isInBounds(coords.x, coords.y, {
+      x: p.projection[0],
+      y: p.projection[1],
+      width: p.bounds.width,
+      height: p.bounds.height,
+    })
+  );
 
 // Update UI fields with artist data.
 export const updateArtistFields = (artist) => {

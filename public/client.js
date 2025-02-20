@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Fetch point data.
   const res = await fetch("/api/points");
+  console.log("Response:", res);
   if (!res.ok) throw new Error(res.statusText);
   const points = await res.json();
   console.log(`Total points received: ${points.length}`);
@@ -41,7 +42,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Initialize scales and attach zoom behavior.
   const { xScale, yScale } = initScalesAndZoom(
     canvas,
-    points,
+    points.map((p) => ({ ...p, x: p.projection[0], y: p.projection[1] })),
     margin,
     dims,
     onZoom

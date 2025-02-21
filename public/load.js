@@ -8,15 +8,15 @@ const image = (filename, isResized = false) =>
     img.onerror = (e) => rej(`Failed to load ${filename}: ${e}`);
   });
 
-export const thumbnails = async (pts) => {
+const thumbnails = async (pts) => {
   const imgs = await Promise.all(pts.map((p) => image(p.filename)));
   pts.forEach((p, i) => (p.thumb = imgs[i]));
   return pts;
 };
 
-export const resized = (filename) => image(filename, true);
+const resized = (filename) => image(filename, true);
 
-export const artists = async (name) => {
+const artists = async (name) => {
   try {
     const r = await fetch("/api/artists");
     if (!r.ok) throw new Error(r.statusText);
@@ -26,3 +26,5 @@ export const artists = async (name) => {
     return null;
   }
 };
+
+export { thumbnails, resized, artists };

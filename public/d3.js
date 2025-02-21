@@ -1,17 +1,17 @@
-export const dimensions = (canvas) => {
+const dimensions = (canvas) => {
   const d = { width: window.innerWidth, height: window.innerHeight };
   canvas.width = d.width;
   canvas.height = d.height;
   return d;
 };
 
-export const range = (x, y, dims, m) => {
+const range = (x, y, dims, m) => {
   x.range([m, dims.width - m]);
   y.range([dims.height - m, m]);
   return dims;
 };
 
-export const scales = (pts, m, d) => {
+const scales = (pts, m, d) => {
   const x = d3
     .scaleLinear()
     .domain(d3.extent(pts, (p) => p.x))
@@ -23,7 +23,7 @@ export const scales = (pts, m, d) => {
   return { x, y };
 };
 
-export const zoom = (canvas, onZoom) => {
+const zoom = (canvas, onZoom) => {
   d3.select(canvas).call(
     d3
       .zoom()
@@ -32,7 +32,7 @@ export const zoom = (canvas, onZoom) => {
   );
 };
 
-export const draw = (ctx, pts, x, y, d, t = d3.zoomIdentity) => {
+const draw = (ctx, pts, x, y, d, t = d3.zoomIdentity) => {
   ctx.save();
   ctx.clearRect(0, 0, d.width, d.height);
   ctx.translate(t.x, t.y);
@@ -47,3 +47,5 @@ const point = (ctx, p, x, y, s = 80) => {
   ctx.drawImage(p.thumb, cx - s / 2, cy - s / 2, s, s);
   return { x: cx - s / 2, y: cy - s / 2, width: s, height: s };
 };
+
+export { dimensions, range, scales, zoom, draw };

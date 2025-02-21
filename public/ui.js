@@ -29,7 +29,7 @@ export const show = async (point, loadResized, loadArtist) => {
   }
 };
 
-export const within = (x, y, box) =>
+const within = (x, y, box) =>
   x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height;
 
 const coords = (x, y, t, rect) => ({
@@ -37,7 +37,9 @@ const coords = (x, y, t, rect) => ({
   y: (y - rect.top - t.y) / t.k,
 });
 
-export const hit = (pts, t, rect, xx, yy) => {
+const hit = (pts, t, rect, xx, yy) => {
   const c = coords(xx, yy, t, rect);
   return pts.find((p) => within(c.x, c.y, p.bounds));
 };
+
+export { show, within, hit };

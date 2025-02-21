@@ -1,16 +1,6 @@
 import { dimensions, range, scales, zoom, draw } from "./d3.js";
 import { thumbnails, resized, artists } from "./load.js";
-import { show, within } from "./ui.js";
-
-const coords = (x, y, t, rect) => ({
-  x: (x - rect.left - t.x) / t.k,
-  y: (y - rect.top - t.y) / t.k,
-});
-
-const hit = (pts, t, rect, xx, yy) => {
-  const c = coords(xx, yy, t, rect);
-  return pts.find((p) => within(c.x, c.y, p.bounds));
-};
+import { show, within, hit } from "./ui.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const canvas = document.getElementById("canvas");

@@ -24,12 +24,13 @@ const scales = (pts, m, d) => {
 };
 
 const zoom = (canvas, onZoom) => {
-  d3.select(canvas).call(
-    d3
-      .zoom()
-      .scaleExtent([0.5, 20])
-      .on("zoom", (ev) => onZoom(ev.transform))
-  );
+  const zoomBehavior = d3
+    .zoom()
+    .scaleExtent([0.5, 20])
+    .on("zoom", (ev) => onZoom(ev.transform));
+
+  d3.select(canvas).call(zoomBehavior);
+  return zoomBehavior;
 };
 
 const draw = (ctx, pts, x, y, d, t = d3.zoomIdentity) => {

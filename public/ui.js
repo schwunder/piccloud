@@ -13,7 +13,7 @@ const fields = (artist) => {
   });
 };
 
-export const show = async (point, loadResized, loadArtist) => {
+const show = async (point, loadResized, loadArtist) => {
   const el = document.getElementById("image");
   el.innerHTML = "<p>Loading resized image...</p>";
   try {

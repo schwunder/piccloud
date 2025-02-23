@@ -1,6 +1,6 @@
 import { dimensions, range, scales, zoom, draw } from "./d3.js";
 import { thumbnails, resized, artists } from "./load.js";
-import { show, within, hit } from "./ui.js";
+import { show, hit } from "./ui.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const canvas = document.getElementById("canvas");

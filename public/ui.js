@@ -42,4 +42,4 @@ const hit = (pts, t, rect, xx, yy) => {
   return pts.find((p) => within(c.x, c.y, p.bounds));
 };
 
-export { show, within, hit };
+export { show, hit };

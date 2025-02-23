@@ -7,12 +7,19 @@ Bun.serve({
 
     if (!path.startsWith("/api/")) {
       return new Response(
-        Bun.file("public" + ((path === "/" && "/index.html") || path))
+        Bun.file("public" + ((path === "/" && "/index.html") || path)),
+        {
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+          },
+        }
       );
     }
 
     const handlers = {
-      points: () => points("Albrecht Durer", "umap", 5),
+      points: () => points("Albrecht Durer", "umap", 200),
       artists,
     };
     const key = path.slice(5);

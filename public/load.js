@@ -1,11 +1,24 @@
 const image = (filename, isResized = false) =>
   new Promise((res, rej) => {
     const img = new Image();
-    img.src = `http://localhost:3001/${
+    // Required for canvas operations to prevent tainted canvas security errors
+    img.crossOrigin = "anonymous";
+
+    img.onerror = (e) => {
+      console.error(`Failed to load ${filename}:`, e);
+      rej(`Failed to load ${filename}: ${e}`);
+    };
+
+    img.onload = () => {
+      console.log(`Successfully loaded ${filename}`);
+      res(img);
+    };
+
+    const path = `http://localhost:3001/${
       isResized ? "resized" : "thumbnails"
     }/${filename}`;
-    img.onload = () => res(img);
-    img.onerror = (e) => rej(`Failed to load ${filename}: ${e}`);
+    console.log(`Attempting to load: ${path}`);
+    img.src = path;
   });
 
 const thumbnails = async (pts) => {

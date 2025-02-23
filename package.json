@@ -3,5 +3,8 @@
     "ml-pca": "^4.1.1",
     "tsne-js": "^1.0.3",
     "umap-js": "^1.4.0"
+  },
+  "devDependencies": {
+    "d3": "^7.9.0"
   }
 }

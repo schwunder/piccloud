@@ -19,7 +19,7 @@ Bun.serve({
     }
 
     const handlers = {
-      points: () => points("Albrecht Durer", "umap", 200),
+      points: () => points("umap", 8446),
       artists,
     };
     const key = path.slice(5);

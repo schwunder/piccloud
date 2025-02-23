@@ -52,14 +52,12 @@ art
  * Retrieves points for a given artist using the specified projection type.
  * JSON-encoded projection data is safely parsed into JavaScript objects.
  */
-const points = (artist, projectionType, limit = null) => {
+const points = (projectionType, limit = null) => {
   const count = art.query("SELECT COUNT(*) as count FROM projections").get();
   console.log(`Total records in projections: ${count.count}`);
 
-  // Convert spaces to underscores for filename matching
-  const artistInFilename = artist.replace(" ", "_");
   const limitClause = limit ? " LIMIT ?" : "";
-  const params = [artist];
+  const params = [];
   if (limit) params.push(limit);
 
   const points = art
@@ -67,14 +65,12 @@ const points = (artist, projectionType, limit = null) => {
       `
       SELECT filename, artist, ${projectionType}_projection 
       FROM projections 
-      WHERE artist = ?
-      ORDER BY CAST(REPLACE(REPLACE(filename, '${artistInFilename}_', ''), '.avif', '') AS INTEGER) ASC
       ${limitClause}
     `
     )
     .all(...params);
 
-  console.log(`Found ${points.length} points for artist ${artist}`);
+  console.log(`Found ${points.length} points`);
 
   const mappedPoints = points.map((point) => ({
     ...point,

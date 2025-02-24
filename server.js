@@ -19,7 +19,7 @@ Bun.serve({
     }
 
     const handlers = {
-      points: () => points("umap", 8446),
+      points,
       artists,
     };
     const key = path.slice(5);

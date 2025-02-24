@@ -38,25 +38,22 @@ art
 /**
  * Retrieves points for a given artist using the specified projection type.
  * JSON-encoded projection data is safely parsed into JavaScript objects.
+ * @param {string} [projectionType="umap"] - The type of projection to retrieve
  * todo return float32array
  */
-const points = (projectionType, limit = null) => {
+const points = (projectionType = "umap") => {
   const count = art.query("SELECT COUNT(*) as count FROM projections").get();
   console.log(`Total records in projections: ${count.count}`);
-
-  const limitClause = limit ? " LIMIT ?" : "";
-  const params = [];
-  if (limit) params.push(limit);
 
   const points = art
     .query(
       `
       SELECT filename, artist, ${projectionType}_projection 
       FROM projections 
-      ${limitClause}
+      LIMIT 1000
     `
     )
-    .all(...params);
+    .all();
 
   console.log(`Found ${points.length} points`);
 

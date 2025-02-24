@@ -6,19 +6,6 @@ const art = new Database("art.sqlite", { create: true });
 art
   .query(
     `
-  CREATE TABLE IF NOT EXISTS embeddings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, 
-    filename TEXT UNIQUE, 
-    artist TEXT,
-    embedding BLOB
-  )
-`
-  )
-  .run();
-
-art
-  .query(
-    `
   CREATE TABLE IF NOT EXISTS artists (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE, 
@@ -51,6 +38,7 @@ art
 /**
  * Retrieves points for a given artist using the specified projection type.
  * JSON-encoded projection data is safely parsed into JavaScript objects.
+ * todo return float32array
  */
 const points = (projectionType, limit = null) => {
   const count = art.query("SELECT COUNT(*) as count FROM projections").get();
@@ -103,55 +91,4 @@ const artists = () => {
     .all();
 };
 
-/**
- * Retrieves embeddings from the database and converts BLOB data to a Float32Array.
- */
-const getEmbeddings = () => {
-  const rows = art
-    .query(
-      `
-    SELECT filename, embedding 
-    FROM embeddings
-  `
-    )
-    .all();
-
-  return rows.map(({ filename, embedding: buffer }) => ({
-    filename,
-    embedding: new Float32Array(
-      buffer.buffer,
-      buffer.byteOffset,
-      buffer.length / Float32Array.BYTES_PER_ELEMENT
-    ),
-  }));
-};
-
-/**
- * Updates projection data in the database.
- * Each projection is serialized to JSON before being stored.
- */
-const updateProjections = (dataArray, projectionType) => {
-  const query = `
-    UPDATE projections 
-    SET ${projectionType}_projection = ? 
-    WHERE filename = ?
-  `;
-  try {
-    art.transaction(() => {
-      const stmt = art.prepare(query);
-      for (const { filename, projection } of dataArray) {
-        if (!filename || !projection) {
-          throw new Error(`Invalid data: missing filename or projection`);
-        }
-        const serialized = JSON.stringify(projection);
-        stmt.run(serialized, filename);
-      }
-    })();
-    return true;
-  } catch (error) {
-    console.error(`Error updating ${projectionType} projections:`, error);
-    return false;
-  }
-};
-
-export { points, artists, getEmbeddings, updateProjections };
+export { points, artists };

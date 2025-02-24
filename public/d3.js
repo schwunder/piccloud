@@ -1,3 +1,6 @@
+// d3.js
+let lastTransform;
+
 const dimensions = (canvas) => {
   const d = { width: window.innerWidth, height: window.innerHeight };
   canvas.width = d.width;
@@ -34,6 +37,21 @@ const zoom = (canvas, onZoom) => {
 };
 
 const draw = (ctx, pts, x, y, d, t = d3.zoomIdentity) => {
+  // Initialize lastTransform if not set
+  if (!lastTransform) {
+    lastTransform = t;
+  } else {
+    // Only skip redraw if not the first time and transformation hasn't changed significantly
+    if (
+      Math.abs(t.x - lastTransform.x) < 1 &&
+      Math.abs(t.y - lastTransform.y) < 1 &&
+      Math.abs(t.k - lastTransform.k) < 0.01
+    ) {
+      return;
+    }
+  }
+  lastTransform = t;
+
   ctx.save();
   ctx.clearRect(0, 0, d.width, d.height);
   ctx.translate(t.x, t.y);
@@ -49,4 +67,9 @@ const point = (ctx, p, x, y, s = 80) => {
   return { x: cx - s / 2, y: cy - s / 2, width: s, height: s };
 };
 
-export { dimensions, range, scales, zoom, draw };
+// Function to reset lastTransform for testing
+const resetTransform = () => {
+  lastTransform = undefined;
+};
+
+export { dimensions, range, scales, zoom, draw, resetTransform };

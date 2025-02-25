@@ -1,11 +1,14 @@
-import { dimensions, range, scales, zoom, draw } from "./d3.js";
-import { thumbnails, resized, artists } from "./load.js";
-import { show, hit } from "./ui.js";
+// d3 is loaded via CDN
+declare const d3: any;
+
+import { dimensions, range, scales, zoom, draw } from "./d3";
+import { thumbnails, resized, artists } from "./load";
+import { show, hit } from "./ui";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const canvas = document.getElementById("canvas");
-  const ctx = canvas.getContext("2d");
-  const resizedPane = document.getElementById("resized");
+  const canvas = document.getElementById("canvas") as HTMLCanvasElement;
+  const ctx = canvas.getContext("2d")!;
+  const resizedPane = document.getElementById("resized")!;
   const html = document.documentElement;
   const margin = 40;
 

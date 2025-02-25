@@ -10,3 +10,4 @@ backup
 node_modules
 .vscode
 *.test.js
+*.test.ts

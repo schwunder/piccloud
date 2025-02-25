@@ -7,3 +7,5 @@ use simple dimensionality reduction as fourth algo to compare to. A naïve downs
 for development now i only need the public folder and the server and caddy file and less functions in db. the projection file is not used in the frontend.
 
 i ll remove the projection file for now and streamline the db in order to implement ark type and type script
+
+migration to typescript introduced lots of bloat and is done via auto code gen

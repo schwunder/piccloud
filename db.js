@@ -1,39 +1,7 @@
 import { Database } from "bun:sqlite";
 
-// Initialize the database (creating tables if needed)
-const art = new Database("art.sqlite", { create: true });
-
-art
-  .query(
-    `
-  CREATE TABLE IF NOT EXISTS artists (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE, 
-    years TEXT, 
-    genre TEXT,
-    nationality TEXT, 
-    bio TEXT,
-    wikipedia TEXT, 
-    paintings INTEGER
-  )
-`
-  )
-  .run();
-
-art
-  .query(
-    `
-  CREATE TABLE IF NOT EXISTS projections (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, 
-    filename TEXT UNIQUE, 
-    artist TEXT,
-    pca_projection BLOB,
-    umap_projection BLOB,
-    tsne_projection BLOB
-  )
-`
-  )
-  .run();
+// Initialize the database in read-only mode
+const art = new Database("art.sqlite", { readonly: true });
 
 /**
  * Retrieves points for a given artist using the specified projection type.
@@ -45,33 +13,30 @@ const points = (projectionType = "umap") => {
   const count = art.query("SELECT COUNT(*) as count FROM projections").get();
   console.log(`Total records in projections: ${count.count}`);
 
-  const points = art
+  const rows = art
     .query(
-      `
-      SELECT filename, artist, ${projectionType}_projection 
+      `SELECT filename, artist, ${projectionType}_projection 
       FROM projections 
-      LIMIT 1000
-    `
+      LIMIT 1000`
     )
-    .all();
+    .values();
 
-  console.log(`Found ${points.length} points`);
+  console.log(`Found ${rows.length} points`);
 
-  const mappedPoints = points.map((point) => ({
-    ...point,
-    projection: point[projectionType + "_projection"]
+  return rows.map(([filename, artist, projection_str]) => ({
+    filename,
+    artist,
+    projection: projection_str
       ? (() => {
           try {
-            return JSON.parse(point[projectionType + "_projection"]);
+            return JSON.parse(projection_str);
           } catch (e) {
-            console.error(`Error parsing projection for ${point.filename}:`, e);
+            console.error(`Error parsing projection for ${filename}:`, e);
             return null;
           }
         })()
       : null,
   }));
-
-  return mappedPoints;
 };
 
 /**

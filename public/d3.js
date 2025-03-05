@@ -37,11 +37,10 @@ const zoom = (canvas, onZoom) => {
 };
 
 const draw = (ctx, pts, x, y, d, t = d3.zoomIdentity) => {
-  // Initialize lastTransform if not set
+  // Only skip redraw if the transform hasn't changed significantly
   if (!lastTransform) {
     lastTransform = t;
   } else {
-    // Only skip redraw if not the first time and transformation hasn't changed significantly
     if (
       Math.abs(t.x - lastTransform.x) < 1 &&
       Math.abs(t.y - lastTransform.y) < 1 &&
@@ -60,14 +59,20 @@ const draw = (ctx, pts, x, y, d, t = d3.zoomIdentity) => {
   ctx.restore();
 };
 
-const point = (ctx, p, x, y, s = 80) => {
+// Just change this default size to 5
+const point = (ctx, p, x, y, s = 1) => {
+  // Use p.projection if you want to remain consistent with the old code,
+  // or p.x/p.y if that is already set. Here let's keep p.projection[0], [1].
   const cx = x(p.projection[0]);
   const cy = y(p.projection[1]);
+
+  // Draw the image at 5x5
   ctx.drawImage(p.thumb, cx - s / 2, cy - s / 2, s, s);
+
   return { x: cx - s / 2, y: cy - s / 2, width: s, height: s };
 };
 
-// Function to reset lastTransform for testing
+// Function to reset lastTransform for testing, if needed
 const resetTransform = () => {
   lastTransform = undefined;
 };

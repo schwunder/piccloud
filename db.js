@@ -7,7 +7,7 @@ const points = (projectionType = "umap") => {
     .query(
       `SELECT filename, artist, ${projectionType}_projection 
       FROM projections 
-      LIMIT 1000`
+    `
     )
     .values()
     .map(([filename, artist, projection]) => ({

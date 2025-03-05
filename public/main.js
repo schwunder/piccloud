@@ -13,8 +13,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const r = await fetch("/api/points");
   if (!r.ok) throw new Error(r.statusText);
-  const pts = await r.json();
-
+  const tempPts = await r.json();
+  const pts = tempPts.slice(0, 1000);
   await thumbnails(pts);
 
   let currentT = d3.zoomIdentity;

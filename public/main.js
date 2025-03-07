@@ -43,8 +43,38 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Initial draw and cache
   console.time("⏳ Initial Drawing Time");
-  draw(ctx, pts, s.x, s.y, dims);
+
+  // Maximum resolution square bitmap (16384 is typical browser max)
+  const fullDims = { width: 16384, height: 16384 };
+
+  canvas.width = fullDims.width;
+  canvas.height = fullDims.height;
+
+  // Create new scales for the high-res canvas
+  const hiResScales = scales(
+    mapped,
+    margin * (fullDims.width / dims.width),
+    fullDims
+  );
+
+  // Draw using high-res scales
+  draw(ctx, pts, hiResScales.x, hiResScales.y, fullDims);
   cachedBitmap = await createImageBitmap(canvas);
+
+  // Reset to viewport size
+  canvas.width = dims.width;
+  canvas.height = dims.height;
+
+  // Calculate initial transform to fit everything
+  const scale = Math.min(
+    dims.width / fullDims.width,
+    dims.height / fullDims.height
+  );
+  currentT = d3.zoomIdentity.scale(scale);
+
+  // Initial display with fit-to-view transform
+  rerender(ctx, dims, currentT, cachedBitmap);
+
   console.timeEnd("⏳ Initial Drawing Time");
   console.log("✅ Bitmap cached successfully");
 
@@ -82,9 +112,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.addEventListener("resize", () => {
     dims = dimensions(canvas);
     range(s.x, s.y, dims, margin);
-    draw(ctx, pts, s.x, s.y, dims);
+
+    // Maintain high-res drawing on resize
+    canvas.width = fullDims.width;
+    canvas.height = fullDims.height;
+    draw(ctx, pts, s.x, s.y, fullDims);
     createImageBitmap(canvas).then((bitmap) => {
       cachedBitmap = bitmap;
+      canvas.width = dims.width;
+      canvas.height = dims.height;
+      rerender(ctx, dims, currentT, bitmap);
     });
   });
 });

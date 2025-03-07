@@ -14,14 +14,28 @@ const range = (x, y, dims, m) => {
 };
 
 const scales = (pts, m, d) => {
+  // Get data extents
+  const xExtent = d3.extent(pts, (p) => p.x);
+  const yExtent = d3.extent(pts, (p) => p.y);
+
+  // Calculate data aspect ratio
+  const dataWidth = xExtent[1] - xExtent[0];
+  const dataHeight = yExtent[1] - yExtent[0];
+  const dataAspect = dataWidth / dataHeight;
+
+  // Use the smaller dimension to maintain aspect ratio
+  const size = Math.min(d.width, d.height) - 2 * m;
+
   const x = d3
     .scaleLinear()
-    .domain(d3.extent(pts, (p) => p.x))
-    .range([m, d.width - m]);
+    .domain(xExtent)
+    .range([m, m + size * dataAspect]);
+
   const y = d3
     .scaleLinear()
-    .domain(d3.extent(pts, (p) => p.y))
-    .range([d.height - m, m]);
+    .domain(yExtent)
+    .range([m + size, m]); // Flip Y axis
+
   return { x, y };
 };
 
@@ -67,7 +81,7 @@ const rerender = (ctx, d, t = d3.zoomIdentity, bitmap) => {
   ctx.restore();
 };
 
-const point = (ctx, p, x, y, s = 20) => {
+const point = (ctx, p, x, y, s = 75) => {
   const cx = x(p.projection[0]);
   const cy = y(p.projection[1]);
   ctx.drawImage(p.thumb, cx - s / 2, cy - s / 2, s, s);

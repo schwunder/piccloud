@@ -91,15 +91,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Enable zoom
   zoom(canvas, onZoom);
 
-  // Clicking logic for resizing or showing a larger pane
-  // canvas.addEventListener("click", async (e) => {
-  //   const rect = canvas.getBoundingClientRect();
-  //   const p = hit(pts, currentT, rect, e.clientX, e.clientY);
-  //   if (p) {
-  //     html.classList.add("show-resized");
-  //     await show(p, resized, artists);
-  //   }
-  // });
+  // Update the click event listener to use the hit detection function from ui.js
+  canvas.addEventListener("click", async (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const p = hit(pts, currentT, rect, e.clientX, e.clientY);
+    if (p) {
+      html.classList.add("show-resized");
+      await show(p, resized, artists);
+      console.log("Clicked on image at original coordinates:", p.projection);
+    }
+  });
 
   // Close enlarged view
   resizedPane.addEventListener("click", (e) => {

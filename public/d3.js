@@ -85,7 +85,16 @@ const point = (ctx, p, x, y, s = 75) => {
   const cx = x(p.projection[0]);
   const cy = y(p.projection[1]);
   ctx.drawImage(p.thumb, cx - s / 2, cy - s / 2, s, s);
-  return { x: cx - s / 2, y: cy - s / 2, width: s, height: s };
+
+  // Store normalized coordinates and dimensions for hit detection
+  p.bounds = {
+    x: cx - s / 2,
+    y: cy - s / 2,
+    width: s,
+    height: s,
+  };
+
+  return p.bounds;
 };
 
 // Function to reset lastTransform for testing, if needed
@@ -93,4 +102,13 @@ const resetTransform = () => {
   lastTransform = undefined;
 };
 
-export { dimensions, range, scales, zoom, draw, rerender, resetTransform };
+export {
+  dimensions,
+  range,
+  scales,
+  zoom,
+  draw,
+  rerender,
+  point,
+  resetTransform,
+};

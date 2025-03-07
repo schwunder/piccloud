@@ -1,5 +1,4 @@
 // d3.js
-let lastTransform;
 
 const dimensions = (canvas) => {
   const d = { width: window.innerWidth, height: window.innerHeight };
@@ -37,7 +36,17 @@ const zoom = (canvas, onZoom) => {
 };
 
 const draw = (ctx, pts, x, y, d, t = d3.zoomIdentity) => {
-  // Only skip redraw if the transform hasn't changed significantly
+  ctx.save();
+  ctx.clearRect(0, 0, d.width, d.height);
+  ctx.translate(t.x, t.y);
+  ctx.scale(t.k, t.k);
+  pts.forEach((p) => (p.bounds = point(ctx, p, x, y)));
+  ctx.restore();
+};
+
+let lastTransform;
+const rerender = (ctx, d, t = d3.zoomIdentity, bitmap) => {
+  // Skip if transform hasn't changed significantly
   if (!lastTransform) {
     lastTransform = t;
   } else {
@@ -53,22 +62,15 @@ const draw = (ctx, pts, x, y, d, t = d3.zoomIdentity) => {
 
   ctx.save();
   ctx.clearRect(0, 0, d.width, d.height);
-  ctx.translate(t.x, t.y);
-  ctx.scale(t.k, t.k);
-  pts.forEach((p) => (p.bounds = point(ctx, p, x, y)));
+  ctx.setTransform(t.k, 0, 0, t.k, t.x, t.y);
+  ctx.drawImage(bitmap, 0, 0);
   ctx.restore();
 };
 
-// Just change this default size to 5
-const point = (ctx, p, x, y, s = 1) => {
-  // Use p.projection if you want to remain consistent with the old code,
-  // or p.x/p.y if that is already set. Here let's keep p.projection[0], [1].
+const point = (ctx, p, x, y, s = 20) => {
   const cx = x(p.projection[0]);
   const cy = y(p.projection[1]);
-
-  // Draw the image at 5x5
   ctx.drawImage(p.thumb, cx - s / 2, cy - s / 2, s, s);
-
   return { x: cx - s / 2, y: cy - s / 2, width: s, height: s };
 };
 
@@ -77,4 +79,4 @@ const resetTransform = () => {
   lastTransform = undefined;
 };
 
-export { dimensions, range, scales, zoom, draw, resetTransform };
+export { dimensions, range, scales, zoom, draw, rerender, resetTransform };

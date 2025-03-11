@@ -1,5 +1,4 @@
 // Core rendering and transformation functions
-
 const IMAGE_SIZE = 75;
 const MAX_BITMAP_SIZE = 16384;
 
@@ -11,7 +10,7 @@ function dimensions(canvas) {
   return dims;
 }
 
-// Create appropriate scales for the data points
+// Create scales for the data points
 function createScales(points, margin, dims) {
   const xExtent = d3.extent(points, (p) => p.x);
   const yExtent = d3.extent(points, (p) => p.y);
@@ -40,7 +39,7 @@ function createScales(points, margin, dims) {
 function setupZoom(canvas, onZoom) {
   const zoomBehavior = d3
     .zoom()
-    .scaleExtent([0.01, 20]) // Allow zooming out much further
+    .scaleExtent([0.01, 20])
     .on("zoom", (e) => onZoom(e.transform));
 
   d3.select(canvas).call(zoomBehavior);
@@ -75,6 +74,11 @@ function drawToBitmap(ctx, points, scales, dims, boundsKey = "bounds") {
 
 // Render the current view with transform
 function renderView(ctx, dims, transform, bitmap) {
+  if (!bitmap) {
+    console.error("Attempted to render with null bitmap");
+    return;
+  }
+
   ctx.clearRect(0, 0, dims.width, dims.height);
   ctx.save();
   ctx.setTransform(transform.k, 0, 0, transform.k, transform.x, transform.y);

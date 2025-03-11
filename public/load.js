@@ -1,5 +1,3 @@
-// load.js - handles image and data loading
-
 // Load a single image (thumbnail or resized)
 const loadImage = (filename, isResized = false) =>
   new Promise((resolve, reject) => {
@@ -17,6 +15,7 @@ const loadImage = (filename, isResized = false) =>
 
 // load all thumbnails for points
 const thumbnails = async (points) => {
+  console.log(`Loading ${points.length} thumbnails...`);
   const images = await Promise.all(points.map((p) => loadImage(p.filename)));
   points.forEach((p, i) => (p.thumb = images[i]));
   return points;

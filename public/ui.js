@@ -1,5 +1,3 @@
-// UI interaction functions
-
 // Find point under cursor with tolerance
 function hitTest(
   points,

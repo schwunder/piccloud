@@ -19,157 +19,205 @@ document.addEventListener("DOMContentLoaded", async () => {
   const html = document.documentElement;
   const resizedPane = document.getElementById("resized");
 
-  // Application state
-  let points = [];
-  let fullBitmap = null;
-  let halfBitmap = null;
-  let currentTransform = d3.zoomIdentity;
-  let isResizedView = false;
+  // Define application states
+  const AppState = {
+    LOADING_DATA: "loading_data",
+    LOADING_IMAGES: "loading_images",
+    CREATING_BITMAPS: "creating_bitmaps",
+    VIEWING: "viewing",
+    DETAIL: "detail",
+  };
 
-  // 1. Load data and images
+  // Application state
+  const state = {
+    current: AppState.LOADING_DATA,
+    points: [],
+    bitmaps: {
+      full: null,
+      half: null,
+    },
+    transform: d3.zoomIdentity,
+    selectedPoint: null,
+
+    transition(to, data = {}) {
+      console.log(`State transition: ${this.current} → ${to}`);
+      this.current = to;
+
+      // Handle state-specific logic
+      if (to === AppState.DETAIL) {
+        this.selectedPoint = data.point;
+        html.classList.add("show-resized");
+      } else if (
+        to === AppState.VIEWING &&
+        html.classList.contains("show-resized")
+      ) {
+        html.classList.remove("show-resized");
+      }
+
+      // Re-render if appropriate
+      if (to === AppState.VIEWING || to === AppState.DETAIL) {
+        updateView();
+      }
+    },
+  };
+
+  // Initialize the application
   try {
-    // Fetch points data
+    await initializeApp();
+  } catch (error) {
+    console.error("Failed to initialize app:", error);
+  }
+
+  // Function to update view based on current state
+  function updateView() {
+    const currentBitmap =
+      state.current === AppState.DETAIL
+        ? state.bitmaps.half
+        : state.bitmaps.full;
+
+    const dims = dimensions(canvas);
+    renderView(ctx, dims, state.transform, currentBitmap);
+  }
+
+  // App initialization pipeline
+  async function initializeApp() {
+    // 1. Load data
+    state.transition(AppState.LOADING_DATA);
     const response = await fetch("/api/points");
     if (!response.ok) throw new Error(response.statusText);
 
-    points = (await response.json()).slice(0, 8446).map((p) => ({
+    const points = (await response.json()).slice(0, 8446).map((p) => ({
       ...p,
       x: p.projection[0],
       y: p.projection[1],
     }));
+    state.points = points;
+    console.log(`Loaded ${state.points.length} data points`);
 
-    // Load thumbnails
-    await thumbnails(points);
-  } catch (error) {
-    console.error("Failed to load data:", error);
-    return;
+    // 2. Load images
+    state.transition(AppState.LOADING_IMAGES);
+    await thumbnails(state.points);
+    console.log("Loaded all thumbnails");
+
+    // 3. Create bitmaps
+    state.transition(AppState.CREATING_BITMAPS);
+    await createBitmaps();
+    console.log("Created bitmaps");
+
+    // 4. Setup interactions
+    setupInteractions();
+
+    // 5. Transition to viewing state
+    state.transition(AppState.VIEWING);
+    console.log("App initialization complete");
   }
 
-  // 2. Create bitmaps
-  try {
+  // Bitmap factory
+  async function createBitmaps() {
     const dims = dimensions(canvas);
 
     // Create full-width bitmap
+    console.log("Creating full-width bitmap");
     canvas.width = MAX_BITMAP_SIZE;
     canvas.height = MAX_BITMAP_SIZE;
-    const fullScales = createScales(points, 40, {
+    const fullScales = createScales(state.points, 40, {
       width: MAX_BITMAP_SIZE,
       height: MAX_BITMAP_SIZE,
     });
     drawToBitmap(
       ctx,
-      points,
+      state.points,
       fullScales,
       { width: MAX_BITMAP_SIZE, height: MAX_BITMAP_SIZE },
       "fullBounds"
     );
-    fullBitmap = await createImageBitmap(canvas);
+    state.bitmaps.full = await createImageBitmap(canvas);
 
     // Create half-width bitmap
+    console.log("Creating half-width bitmap");
     canvas.width = MAX_BITMAP_SIZE / 2;
     canvas.height = MAX_BITMAP_SIZE;
-    const halfScales = createScales(points, 40, {
+    const halfScales = createScales(state.points, 40, {
       width: MAX_BITMAP_SIZE / 2,
       height: MAX_BITMAP_SIZE,
     });
     drawToBitmap(
       ctx,
-      points,
+      state.points,
       halfScales,
       { width: MAX_BITMAP_SIZE / 2, height: MAX_BITMAP_SIZE },
       "halfBounds"
     );
-    halfBitmap = await createImageBitmap(canvas);
+    state.bitmaps.half = await createImageBitmap(canvas);
 
     // Reset canvas to viewport size
     canvas.width = dims.width;
     canvas.height = dims.height;
-  } catch (error) {
-    console.error("Failed to create bitmaps:", error);
-    return;
   }
 
-  // 3. Set up interactions
-
-  // Zoom handler
-  const onZoom = (transform) => {
-    currentTransform = transform;
-    updateView();
-  };
-
-  // Set up zoom behavior
-  const zoomBehavior = setupZoom(canvas, onZoom);
-
-  // Calculate initial scale to fit everything
-  const dims = dimensions(canvas);
-  const initialScale = getFitScale(dims, MAX_BITMAP_SIZE, MAX_BITMAP_SIZE);
-
-  // Set initial transform
-  currentTransform = d3.zoomIdentity.scale(initialScale);
-  d3.select(canvas).call(zoomBehavior.transform, currentTransform);
-
-  // 4. Set up event handlers
-
-  // Canvas click - hit detection and detail view
-  canvas.addEventListener("click", (e) => {
-    const rect = canvas.getBoundingClientRect();
-    // Use appropriate bounds based on current view
-    const boundsKey = isResizedView ? "halfBounds" : "fullBounds";
-    const point = hitTest(
-      points,
-      e.clientX,
-      e.clientY,
-      rect,
-      currentTransform,
-      boundsKey
-    );
-
-    if (point) {
-      // Show detail view
-      isResizedView = true;
-      html.classList.add("show-resized");
-      updateView();
-
-      // Show artist info
-      showArtistInfo(point, resized, artists);
-    }
-  });
-
-  // Close detail view
-  resizedPane.addEventListener("click", (e) => {
-    if (e.target === resizedPane) {
-      isResizedView = false;
-      html.classList.remove("show-resized");
+  // Setup interaction handlers
+  function setupInteractions() {
+    // Command functions
+    function resetViewZoom() {
+      const dims = dimensions(canvas);
+      const scale = getFitScale(dims, MAX_BITMAP_SIZE, MAX_BITMAP_SIZE);
+      state.transform = resetZoom(canvas, scale);
       updateView();
     }
-  });
 
-  // Escape key to reset zoom and close detail
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      // Close detail view if open
-      if (isResizedView) {
-        isResizedView = false;
-        html.classList.remove("show-resized");
-      }
+    // Set up zoom behavior
+    const onZoom = (transform) => {
+      state.transform = transform;
+      updateView();
+    };
 
-      // Reset zoom
-      currentTransform = resetZoom(
-        canvas,
-        getFitScale(dimensions(canvas), MAX_BITMAP_SIZE, MAX_BITMAP_SIZE)
+    const zoomBehavior = setupZoom(canvas, onZoom);
+
+    // Set initial transform
+    const dims = dimensions(canvas);
+    const initialScale = getFitScale(dims, MAX_BITMAP_SIZE, MAX_BITMAP_SIZE);
+    state.transform = d3.zoomIdentity.scale(initialScale);
+    d3.select(canvas).call(zoomBehavior.transform, state.transform);
+
+    // Canvas click - hit detection and detail view
+    canvas.addEventListener("click", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const boundsKey =
+        state.current === AppState.DETAIL ? "halfBounds" : "fullBounds";
+      const point = hitTest(
+        state.points,
+        e.clientX,
+        e.clientY,
+        rect,
+        state.transform,
+        boundsKey
       );
 
-      updateView();
-    }
-  });
+      if (point) {
+        // Show detail view
+        state.transition(AppState.DETAIL, { point });
+        showArtistInfo(point, resized, artists);
+      }
+    });
 
-  // 5. Initial render
-  updateView();
+    // Close detail view on click outside
+    resizedPane.addEventListener("click", (e) => {
+      if (e.target === resizedPane) {
+        state.transition(AppState.VIEWING);
+      }
+    });
 
-  // Update the view based on current state
-  function updateView() {
-    const currentBitmap = isResizedView ? halfBitmap : fullBitmap;
-    const dims = dimensions(canvas);
-    renderView(ctx, dims, currentTransform, currentBitmap);
+    // Escape key to reset zoom and close detail
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        // Close detail view if open
+        if (state.current === AppState.DETAIL) {
+          state.transition(AppState.VIEWING);
+        }
+
+        // Reset zoom
+        resetViewZoom();
+      }
+    });
   }
 });

@@ -33,6 +33,10 @@ const show = async (point, loadResized, loadArtist) => {
     el.appendChild(coordsEl); // Add coordinates first
     el.appendChild(resImg);
     if (art) fields(art);
+
+    // Dispatch an event to signal the resized pane is ready
+    const event = new CustomEvent("resizedPaneReady");
+    document.dispatchEvent(event);
   } catch (e) {
     el.textContent = `Error loading ${point.filename}: ${e}`;
   }

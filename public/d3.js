@@ -102,6 +102,18 @@ const resetTransform = () => {
   lastTransform = undefined;
 };
 
+// Add a new function to handle bitmap switching
+const resetLastTransform = () => {
+  lastTransform = null;
+};
+
+// Function to reset the zoom transform
+const resetZoom = (canvas, initialScale) => {
+  const resetTransform = d3.zoomIdentity.scale(initialScale);
+  d3.select(canvas).call(d3.zoom().transform, resetTransform);
+  return resetTransform;
+};
+
 export {
   dimensions,
   range,
@@ -111,4 +123,6 @@ export {
   rerender,
   point,
   resetTransform,
+  resetLastTransform,
+  resetZoom,
 };

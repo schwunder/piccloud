@@ -1,148 +1,107 @@
-// d3.js
+// Core rendering and transformation functions
 
-const dimensions = (canvas) => {
-  const d = { width: window.innerWidth, height: window.innerHeight };
-  canvas.width = d.width;
-  canvas.height = d.height;
-  return d;
-};
+const IMAGE_SIZE = 75;
+const MAX_BITMAP_SIZE = 16384;
 
-const range = (x, y, dims, m) => {
-  x.range([m, dims.width - m]);
-  y.range([dims.height - m, m]);
+// Get canvas dimensions and update canvas size
+function dimensions(canvas) {
+  const dims = { width: window.innerWidth, height: window.innerHeight };
+  canvas.width = dims.width;
+  canvas.height = dims.height;
   return dims;
-};
+}
 
-const scales = (pts, m, d) => {
-  // Get data extents
-  const xExtent = d3.extent(pts, (p) => p.x);
-  const yExtent = d3.extent(pts, (p) => p.y);
+// Create appropriate scales for the data points
+function createScales(points, margin, dims) {
+  const xExtent = d3.extent(points, (p) => p.x);
+  const yExtent = d3.extent(points, (p) => p.y);
 
-  // Calculate data aspect ratio
+  // Keep aspect ratio intact
   const dataWidth = xExtent[1] - xExtent[0];
   const dataHeight = yExtent[1] - yExtent[0];
   const dataAspect = dataWidth / dataHeight;
 
-  // Use the smaller dimension to maintain aspect ratio
-  const size = Math.min(d.width, d.height) - 2 * m;
+  const size = Math.min(dims.width, dims.height) - 2 * margin;
 
   const x = d3
     .scaleLinear()
     .domain(xExtent)
-    .range([m, m + size * dataAspect]);
+    .range([margin, margin + size * dataAspect]);
 
   const y = d3
     .scaleLinear()
     .domain(yExtent)
-    .range([m + size, m]); // Flip Y axis
+    .range([margin + size, margin]); // Flip Y axis
 
   return { x, y };
-};
+}
 
-const zoom = (canvas, onZoom) => {
+// Set up zoom behavior
+function setupZoom(canvas, onZoom) {
   const zoomBehavior = d3
     .zoom()
     .scaleExtent([0.5, 20])
-    .on("zoom", (ev) => onZoom(ev.transform));
+    .on("zoom", (e) => onZoom(e.transform));
 
   d3.select(canvas).call(zoomBehavior);
   return zoomBehavior;
-};
+}
 
-const draw = (ctx, pts, x, y, d, t = d3.zoomIdentity) => {
-  ctx.save();
-  ctx.clearRect(0, 0, d.width, d.height);
-  ctx.translate(t.x, t.y);
-  ctx.scale(t.k, t.k);
+// Draw all points to a bitmap with specified bounds key
+function drawToBitmap(ctx, points, scales, dims, boundsKey = "bounds") {
+  ctx.clearRect(0, 0, dims.width, dims.height);
 
-  // Update bounds for all points
-  pts.forEach((p) => {
-    if (!p || !p.projection) return;
+  points.forEach((p) => {
+    const cx = scales.x(p.x);
+    const cy = scales.y(p.y);
 
-    const cx = x(p.projection[0]);
-    const cy = y(p.projection[1]);
-    const s = 75; // Image size
-
-    // Store bounds in data coordinates (not screen coordinates)
-    p.bounds = {
-      x: cx - s / 2,
-      y: cy - s / 2,
-      width: s,
-      height: s,
+    // Store bounds with the specified key
+    p[boundsKey] = {
+      x: cx - IMAGE_SIZE / 2,
+      y: cy - IMAGE_SIZE / 2,
+      width: IMAGE_SIZE,
+      height: IMAGE_SIZE,
     };
 
-    // Draw the image
-    ctx.drawImage(p.thumb, cx - s / 2, cy - s / 2, s, s);
+    ctx.drawImage(
+      p.thumb,
+      cx - IMAGE_SIZE / 2,
+      cy - IMAGE_SIZE / 2,
+      IMAGE_SIZE,
+      IMAGE_SIZE
+    );
   });
+}
 
-  ctx.restore();
-};
-
-let lastTransform;
-const rerender = (ctx, d, t = d3.zoomIdentity, bitmap) => {
-  // Skip if transform hasn't changed significantly
-  if (!lastTransform) {
-    lastTransform = t;
-  } else {
-    if (
-      Math.abs(t.x - lastTransform.x) < 1 &&
-      Math.abs(t.y - lastTransform.y) < 1 &&
-      Math.abs(t.k - lastTransform.k) < 0.01
-    ) {
-      return;
-    }
-  }
-  lastTransform = t;
-
+// Render the current view with transform
+function renderView(ctx, dims, transform, bitmap) {
+  ctx.clearRect(0, 0, dims.width, dims.height);
   ctx.save();
-  ctx.clearRect(0, 0, d.width, d.height);
-  ctx.setTransform(t.k, 0, 0, t.k, t.x, t.y);
+  ctx.setTransform(transform.k, 0, 0, transform.k, transform.x, transform.y);
   ctx.drawImage(bitmap, 0, 0);
   ctx.restore();
-};
+}
 
-const point = (ctx, p, x, y, s = 75) => {
-  const cx = x(p.projection[0]);
-  const cy = y(p.projection[1]);
-  ctx.drawImage(p.thumb, cx - s / 2, cy - s / 2, s, s);
+// Create initial scale to fit view
+function getFitScale(dims, bitmapWidth, bitmapHeight) {
+  return Math.min(dims.width / bitmapWidth, dims.height / bitmapHeight);
+}
 
-  // Store normalized coordinates and dimensions for hit detection
-  p.bounds = {
-    x: cx - s / 2,
-    y: cy - s / 2,
-    width: s,
-    height: s,
-  };
-
-  return p.bounds;
-};
-
-// Function to reset lastTransform for testing, if needed
-const resetTransform = () => {
-  lastTransform = undefined;
-};
-
-// Add a new function to handle bitmap switching
-const resetLastTransform = () => {
-  lastTransform = null;
-};
-
-// Function to reset the zoom transform
-const resetZoom = (canvas, initialScale) => {
-  const resetTransform = d3.zoomIdentity.scale(initialScale);
+// Reset zoom to fit view
+function resetZoom(canvas, scale) {
+  const resetTransform = d3.zoomIdentity.scale(scale);
   d3.select(canvas).call(d3.zoom().transform, resetTransform);
   return resetTransform;
-};
+}
 
 export {
   dimensions,
-  range,
-  scales,
-  zoom,
-  draw,
-  rerender,
-  point,
-  resetTransform,
-  resetLastTransform,
+  createScales,
+  setupZoom,
+  drawToBitmap,
+  renderView,
+  getFitScale,
   resetZoom,
+  IMAGE_SIZE,
+  MAX_BITMAP_SIZE,
 };

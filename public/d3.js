@@ -40,7 +40,7 @@ function createScales(points, margin, dims) {
 function setupZoom(canvas, onZoom) {
   const zoomBehavior = d3
     .zoom()
-    .scaleExtent([0.5, 20])
+    .scaleExtent([0.01, 20]) // Allow zooming out much further
     .on("zoom", (e) => onZoom(e.transform));
 
   d3.select(canvas).call(zoomBehavior);

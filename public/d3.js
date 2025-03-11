@@ -54,7 +54,27 @@ const draw = (ctx, pts, x, y, d, t = d3.zoomIdentity) => {
   ctx.clearRect(0, 0, d.width, d.height);
   ctx.translate(t.x, t.y);
   ctx.scale(t.k, t.k);
-  pts.forEach((p) => (p.bounds = point(ctx, p, x, y)));
+
+  // Update bounds for all points
+  pts.forEach((p) => {
+    if (!p || !p.projection) return;
+
+    const cx = x(p.projection[0]);
+    const cy = y(p.projection[1]);
+    const s = 75; // Image size
+
+    // Store bounds in data coordinates (not screen coordinates)
+    p.bounds = {
+      x: cx - s / 2,
+      y: cy - s / 2,
+      width: s,
+      height: s,
+    };
+
+    // Draw the image
+    ctx.drawImage(p.thumb, cx - s / 2, cy - s / 2, s, s);
+  });
+
   ctx.restore();
 };
 
